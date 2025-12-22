@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Moon, Sun, Facebook, Twitter, Github, Rss } from "lucide-react";
+import { Menu, X, Moon, Sun, Facebook, Github, Rss, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Navigation = ({ selectedCategory, onCategoryChange }: { 
   selectedCategory?: string; 
   onCategoryChange?: (category: string) => void 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
   const [isDark, setIsDark] = useState(false);
   const location = useLocation();
   
@@ -50,6 +52,12 @@ export const Navigation = ({ selectedCategory, onCategoryChange }: {
             <button onClick={() => handleNavClick('about')} className="text-foreground hover:text-primary transition-colors cursor-pointer">
               O selu
             </button>
+            {user && (
+              <Link to="/admin" className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+                <Settings className="w-4 h-4" />
+                Admin
+              </Link>
+            )}
             
             <div className="flex items-center gap-4 ml-4 border-l border-border pl-4">
               <a href="https://www.facebook.com/seloSebet" target="_blank" rel="noopener noreferrer" 
@@ -118,6 +126,12 @@ export const Navigation = ({ selectedCategory, onCategoryChange }: {
             <button onClick={() => handleNavClick('about')} className="block w-full text-left text-foreground hover:text-primary transition-colors cursor-pointer">
               O selu
             </button>
+            {user && (
+              <Link to="/admin" onClick={() => setIsOpen(false)} className="block w-full text-left text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+                <Settings className="w-4 h-4" />
+                Admin
+              </Link>
+            )}
             <div className="flex items-center gap-4 pt-4 border-t border-border">
               <a href="https://www.facebook.com/seloSebet" target="_blank" rel="noopener noreferrer"
                  className="hover:scale-110 transition-transform"
