@@ -1,0 +1,165 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 340 82% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 340 82% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 340 82% 12%;
+
+    --primary: 340 82% 52%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 340 100% 70%;
+
+    --secondary: 54 100% 62%;
+    --secondary-foreground: 340 82% 12%;
+    --secondary-glow: 54 100% 80%;
+
+    --accent: 291 64% 42%;
+    --accent-foreground: 0 0% 100%;
+    --accent-glow: 291 100% 65%;
+
+    --muted: 340 20% 95%;
+    --muted-foreground: 340 25% 40%;
+
+    --category-history: 217 91% 60%;
+    --category-culture: 271 81% 56%;
+    --category-people: 142 71% 45%;
+    --category-nature: 159 61% 44%;
+    --category-gastronomy: 24 95% 53%;
+    --category-architecture: 38 92% 50%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 340 20% 90%;
+    --input: 340 20% 90%;
+    --ring: 340 82% 52%;
+
+    --radius: 0.75rem;
+
+    --gradient-hero: linear-gradient(135deg, hsl(340 82% 52%), hsl(291 64% 42%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(340 20% 98%));
+    --gradient-accent: linear-gradient(135deg, hsl(54 100% 62%), hsl(340 82% 52%));
+    
+    --shadow-soft: 0 4px 20px -4px hsl(340 82% 52% / 0.15);
+    --shadow-glow: 0 0 40px hsl(340 100% 70% / 0.3);
+    --shadow-card: 0 8px 30px -8px hsl(340 82% 52% / 0.2);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 340 82% 12%;
+    --sidebar-primary: 340 82% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 340 20% 95%;
+    --sidebar-accent-foreground: 340 82% 52%;
+    --sidebar-border: 340 20% 90%;
+    --sidebar-ring: 340 82% 52%;
+
+    --back-to-top: 11 85% 64%;
+  }
+
+  .dark {
+    --background: 340 25% 8%;
+    --foreground: 0 0% 98%;
+
+    --card: 340 20% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 340 20% 12%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 340 82% 52%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 340 100% 70%;
+
+    --secondary: 54 100% 62%;
+    --secondary-foreground: 340 25% 8%;
+    --secondary-glow: 54 100% 80%;
+
+    --accent: 291 64% 55%;
+    --accent-foreground: 0 0% 100%;
+    --accent-glow: 291 100% 75%;
+
+    --muted: 340 20% 18%;
+    --muted-foreground: 340 15% 65%;
+
+    --category-history: 217 91% 60%;
+    --category-culture: 271 81% 56%;
+    --category-people: 142 71% 45%;
+    --category-nature: 159 61% 44%;
+    --category-gastronomy: 24 95% 53%;
+    --category-architecture: 38 92% 50%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 340 20% 20%;
+    --input: 340 20% 20%;
+    --ring: 340 82% 52%;
+
+    --gradient-hero: linear-gradient(135deg, hsl(340 82% 52%), hsl(291 64% 55%));
+    --gradient-card: linear-gradient(180deg, hsl(340 20% 12%), hsl(340 20% 15%));
+    --gradient-accent: linear-gradient(135deg, hsl(54 100% 62%), hsl(340 82% 52%));
+    
+    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.5);
+    --shadow-glow: 0 0 40px hsl(340 100% 70% / 0.4);
+    --shadow-card: 0 8px 30px -8px hsl(0 0% 0% / 0.6);
+
+    --sidebar-background: 340 25% 8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 340 82% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 340 20% 18%;
+    --sidebar-accent-foreground: 340 82% 52%;
+    --sidebar-border: 340 20% 20%;
+    --sidebar-ring: 340 82% 52%;
+
+    --back-to-top: 11 85% 64%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-mono;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-mono;
+  }
+}
+
+@layer utilities {
+  .parallax-slow {
+    transform: translateZ(-1px) scale(1.5);
+  }
+  
+  .parallax-fast {
+    transform: translateZ(1px) scale(0.9);
+  }
+
+  .text-gradient-primary {
+    @apply bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent;
+  }
+
+  .text-gradient-secondary {
+    @apply bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_30px_-8px_hsl(var(--primary)/0.3)];
+  }
+}

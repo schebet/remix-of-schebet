@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Selo Šebet - Blog</title>
+    <link>https://seloSebet.com</link>
+    <description>Dokumentarni sajt o našem selu — čuvamo priče i tradiciju za buduće generacije</description>
+    <language>sr</language>
+    <atom:link href="https://seloSebet.com/rss.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Šablon</title>
+      <link>https://seloSebet.com/blog/7</link>
+      <description>Ovo je početni blog post koji služi kao šablon. Kopirajte i prilagodite sadržaj prema vašim potrebama...</description>
+      <author>Admin</author>
+      <category>Kultura</category>
+      <pubDate>Mon, 25 Nov 2025 00:00:00 +0000</pubDate>
+      <guid>https://seloSebet.com/blog/7</guid>
+    </item>
+    
+    <item>
+      <title>Istorija sela kroz vekove</title>
+      <link>https://seloSebet.com/blog/1</link>
+      <description>Otkrijte bogatu istoriju sela Šebet, od prvih naseljenika do danas. Priče koje oblikuju našu zajednicu...</description>
+      <author>Neško - Škone</author>
+      <category>Istorija</category>
+      <pubDate>Wed, 15 Jan 2025 00:00:00 +0000</pubDate>
+      <guid>https://seloSebet.com/blog/1</guid>
+    </item>
+    
+    <item>
+      <title>Tradicionalne svečanosti</title>
+      <link>https://seloSebet.com/blog/2</link>
+      <description>Naše selo čuva jedinstvene tradicije i običaje. Saznajte više o godišnjim proslavama i festivalima...</description>
+      <author>Ana Jovanović</author>
+      <category>Kultura</category>
+      <pubDate>Fri, 10 Jan 2025 00:00:00 +0000</pubDate>
+      <guid>https://seloSebet.com/blog/2</guid>
+    </item>
+    
+    <item>
+      <title>Ljudi koji grade zajednicu</title>
+      <link>https://seloSebet.com/blog/3</link>
+      <description>Upoznajte ljude koji čine srce našeg sela. Priče o pojedincima koji doprinose zajednici...</description>
+      <author>Stefan Nikolić</author>
+      <category>Ljudi</category>
+      <pubDate>Sun, 05 Jan 2025 00:00:00 +0000</pubDate>
+      <guid>https://seloSebet.com/blog/3</guid>
+    </item>
+    
+    <item>
+      <title>Prirodne lepote okoline</title>
+      <link>https://seloSebet.com/blog/4</link>
+      <description>Šebet je okružen prelepi prirodom. Istražite šume, reke i planine koje nas okružuju...</description>
+      <author>Jelena Đorđević</author>
+      <category>Priroda</category>
+      <pubDate>Wed, 01 Jan 2025 00:00:00 +0000</pubDate>
+      <guid>https://seloSebet.com/blog/4</guid>
+    </item>
+    
+    <item>
+      <title>Gastronomska baština</title>
+      <link>https://seloSebet.com/blog/5</link>
+      <description>Tradicionalna seoska kuhinja i recepti koji se prenose generacijama. Ukusi detinjstva...</description>
+      <author>Milica Todorović</author>
+      <category>Gastronomija</category>
+      <pubDate>Sat, 28 Dec 2024 00:00:00 +0000</pubDate>
+      <guid>https://seloSebet.com/blog/5</guid>
+    </item>
+    
+    <item>
+      <title>Arhitektonsko nasleđe</title>
+      <link>https://seloSebet.com/blog/6</link>
+      <description>Stare kuće, crkve i mostovi koji svedoče o prošlosti. Očuvanje arhitektonskog nasleđa...</description>
+      <author>Nikola Stanković</author>
+      <category>Arhitektura</category>
+      <pubDate>Fri, 20 Dec 2024 00:00:00 +0000</pubDate>
+      <guid>https://seloSebet.com/blog/6</guid>
+    </item>
+    
+  </channel>
+</rss>
