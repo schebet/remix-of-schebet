@@ -134,23 +134,8 @@ const BlogPost = () => {
   const siteUrl = 'https://sebet.lovable.app';
   const fullUrl = `${siteUrl}/blog/${article.slug}`;
   
-  // OG image must be absolute URL for Facebook
-  // For Supabase storage URLs, use them directly as they are already absolute
-  // For relative paths, prefix with site URL
-  // For articles without cover image, use default OG image
-  const getOgImageUrl = (imageUrl: string | null) => {
-    if (!imageUrl) {
-      return `${siteUrl}/og-images/default.jpg`;
-    }
-    // Supabase storage URLs are already absolute
-    if (imageUrl.startsWith('http')) {
-      return imageUrl;
-    }
-    // Relative paths need the site URL prefix
-    return `${siteUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
-  };
-  
-  const ogImageUrl = getOgImageUrl(article.cover_image);
+  // Fixed OG image for all posts - valid Supabase storage URL
+  const ogImageUrl = 'https://geflwjxcposyetxrmbcq.supabase.co/storage/v1/object/public/article-images/covers/1766478998950-uft5dfsb4l.jpg';
 
   return (
     <div className="min-h-screen flex flex-col">
