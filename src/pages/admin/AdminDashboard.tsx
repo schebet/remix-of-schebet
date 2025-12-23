@@ -37,6 +37,7 @@ import {
   ShieldCheck,
   UserX,
   UserPlus,
+  Image,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -437,17 +438,27 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Action Button */}
+        {/* Action Buttons */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-foreground">
             {isAdmin ? "Upravljanje sadržajem" : "Vaši članci"}
           </h2>
-          <Button asChild className="bg-primary hover:bg-primary/90">
-            <Link to="/admin/new">
-              <Plus className="h-4 w-4 mr-2" />
-              Novi članak
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            {isAdmin && (
+              <Button variant="outline" asChild>
+                <Link to="/admin/gallery">
+                  <Image className="h-4 w-4 mr-2" />
+                  Galerija
+                </Link>
+              </Button>
+            )}
+            <Button asChild className="bg-primary hover:bg-primary/90">
+              <Link to="/admin/new">
+                <Plus className="h-4 w-4 mr-2" />
+                Novi članak
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {loading ? (

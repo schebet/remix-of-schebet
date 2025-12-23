@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ArticleEditor from "./pages/admin/ArticleEditor";
+import GalleryManager from "./pages/admin/GalleryManager";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <ArticleEditor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/gallery"
+            element={
+              <ProtectedRoute>
+                <GalleryManager />
               </ProtectedRoute>
             }
           />
