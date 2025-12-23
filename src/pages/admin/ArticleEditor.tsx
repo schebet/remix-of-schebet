@@ -106,6 +106,7 @@ const ArticleEditor = () => {
   const [aiResources, setAiResources] = useState<AIResource[]>([]);
   const [resourceUploading, setResourceUploading] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [coverImageDialogOpen, setCoverImageDialogOpen] = useState(false);
   const [galleryImages, setGalleryImages] = useState<{ id: string; title: string; image_url: string }[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [inlineUploading, setInlineUploading] = useState(false);
@@ -410,6 +411,22 @@ const ArticleEditor = () => {
     if (galleryImages.length === 0) {
       fetchGalleryImages();
     }
+  };
+
+  const handleOpenCoverImageDialog = () => {
+    setCoverImageDialogOpen(true);
+    if (galleryImages.length === 0) {
+      fetchGalleryImages();
+    }
+  };
+
+  const selectCoverImageFromGallery = (imageUrl: string) => {
+    setForm((prev) => ({ ...prev, cover_image: imageUrl }));
+    setCoverImageDialogOpen(false);
+    toast({
+      title: "Slika izabrana",
+      description: "Naslovna slika je postavljena iz galerije.",
+    });
   };
 
   const insertImageAtCursor = (imageUrl: string, altText: string) => {
@@ -885,6 +902,54 @@ const ArticleEditor = () => {
                 )}
                 
                 <div className="flex items-center gap-2 mt-2">
+                  <Dialog open={coverImageDialogOpen} onOpenChange={setCoverImageDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOpenCoverImageDialog}
+                      >
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Iz galerije
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl max-h-[80vh]">
+                      <DialogHeader>
+                        <DialogTitle>Izaberite naslovnu sliku iz galerije</DialogTitle>
+                      </DialogHeader>
+                      <ScrollArea className="h-[60vh] pr-4">
+                        {galleryLoading ? (
+                          <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : galleryImages.length === 0 ? (
+                          <p className="text-center text-muted-foreground py-8">
+                            Nema slika u galeriji.
+                          </p>
+                        ) : (
+                          <div className="grid grid-cols-3 gap-3">
+                            {galleryImages.map((img) => (
+                              <div
+                                key={img.id}
+                                onClick={() => selectCoverImageFromGallery(img.image_url)}
+                                className="relative aspect-video rounded-lg overflow-hidden cursor-pointer border-2 border-transparent hover:border-primary transition-colors group"
+                              >
+                                <img
+                                  src={img.image_url}
+                                  alt={img.title}
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-white text-sm font-medium">{img.title}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </DialogContent>
+                  </Dialog>
                   <span className="text-xs text-muted-foreground">ili</span>
                   <Input
                     id="cover_image"
@@ -893,7 +958,7 @@ const ArticleEditor = () => {
                       setForm((prev) => ({ ...prev, cover_image: e.target.value }))
                     }
                     placeholder="Unesite URL slike"
-                    className="bg-background text-sm"
+                    className="bg-background text-sm flex-1"
                   />
                 </div>
               </div>
