@@ -8,6 +8,23 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
   Plus,
   Edit,
   Trash2,
@@ -19,6 +36,7 @@ import {
   Users,
   ShieldCheck,
   UserX,
+  UserPlus,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -51,12 +69,22 @@ interface Author {
   full_name: string | null;
 }
 
+interface AvailableUser {
+  id: string;
+  full_name: string | null;
+}
+
 const AdminDashboard = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [allArticles, setAllArticles] = useState<Article[]>([]);
   const [authors, setAuthors] = useState<Author[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<AvailableUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [addAuthorOpen, setAddAuthorOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<string>("author");
+  const [addingAuthor, setAddingAuthor] = useState(false);
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
@@ -77,6 +105,7 @@ const AdminDashboard = () => {
     if (data) {
       fetchAllArticles();
       fetchAuthors();
+      fetchAvailableUsers();
     }
   };
 
@@ -135,6 +164,62 @@ const AdminDashboard = () => {
     }));
 
     setAuthors(authorsWithNames);
+  };
+
+  const fetchAvailableUsers = async () => {
+    // Get all profiles
+    const { data: allProfiles } = await supabase
+      .from("profiles")
+      .select("id, full_name");
+
+    // Get users who already have roles
+    const { data: existingRoles } = await supabase
+      .from("user_roles")
+      .select("user_id");
+
+    const usersWithRoles = new Set(existingRoles?.map(r => r.user_id) || []);
+
+    // Filter out users who already have roles
+    const available = (allProfiles || []).filter(p => !usersWithRoles.has(p.id));
+    setAvailableUsers(available);
+  };
+
+  const handleAddAuthor = async () => {
+    if (!selectedUserId || !selectedRole) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Izaberite korisnika i ulogu.",
+      });
+      return;
+    }
+
+    setAddingAuthor(true);
+
+    const { error } = await supabase.from("user_roles").insert({
+      user_id: selectedUserId,
+      role: selectedRole as "admin" | "author" | "user",
+    });
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Nije moguće dodeliti ulogu.",
+      });
+    } else {
+      toast({
+        title: "Uloga dodeljena",
+        description: `Uspešno dodeljena uloga ${selectedRole}.`,
+      });
+      setAddAuthorOpen(false);
+      setSelectedUserId("");
+      setSelectedRole("author");
+      fetchAuthors();
+      fetchAvailableUsers();
+    }
+
+    setAddingAuthor(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -420,12 +505,86 @@ const AdminDashboard = () => {
             </TabsContent>
 
             <TabsContent value="authors">
+              {/* Add Author Button */}
+              <div className="flex justify-end mb-4">
+                <Dialog open={addAuthorOpen} onOpenChange={setAddAuthorOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-primary hover:bg-primary/90">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Dodeli ulogu
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Dodeli ulogu korisniku</DialogTitle>
+                      <DialogDescription>
+                        Izaberite korisnika i dodelite mu ulogu autora ili administratora.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="user">Korisnik</Label>
+                        <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Izaberite korisnika" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableUsers.length === 0 ? (
+                              <SelectItem value="none" disabled>
+                                Nema dostupnih korisnika
+                              </SelectItem>
+                            ) : (
+                              availableUsers.map((u) => (
+                                <SelectItem key={u.id} value={u.id}>
+                                  {u.full_name || "Nepoznat korisnik"}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="role">Uloga</Label>
+                        <Select value={selectedRole} onValueChange={setSelectedRole}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Izaberite ulogu" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="author">Autor</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setAddAuthorOpen(false)}
+                      >
+                        Otkaži
+                      </Button>
+                      <Button
+                        onClick={handleAddAuthor}
+                        disabled={addingAuthor || !selectedUserId}
+                      >
+                        {addingAuthor && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        Dodeli
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
               <div className="space-y-4">
                 {authors.length === 0 ? (
                   <Card className="border-border/50 border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-12">
                       <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">Nema autora</p>
+                      <p className="text-muted-foreground mb-4">Nema autora</p>
+                      <Button onClick={() => setAddAuthorOpen(true)}>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Dodeli prvu ulogu
+                      </Button>
                     </CardContent>
                   </Card>
                 ) : (
