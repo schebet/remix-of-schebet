@@ -26,13 +26,23 @@ serve(async (req) => {
       );
     }
 
-    const supabaseClient = createClient(
+    // Extract the JWT token from the Authorization header
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Create a service role client to verify the token and get user info
+    const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
     );
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    // Verify the JWT and get the user
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     
     if (authError || !user) {
       console.error("Authentication failed:", authError?.message);
@@ -45,13 +55,15 @@ serve(async (req) => {
       );
     }
 
-    // Optionally check if user has author or admin role
-    const { data: hasAuthorRole } = await supabaseClient.rpc("has_role", {
+    console.log("Authenticated user:", user.email);
+
+    // Check if user has author or admin role
+    const { data: hasAuthorRole } = await supabaseAdmin.rpc("has_role", {
       _user_id: user.id,
       _role: "author",
     });
 
-    const { data: hasAdminRole } = await supabaseClient.rpc("has_role", {
+    const { data: hasAdminRole } = await supabaseAdmin.rpc("has_role", {
       _user_id: user.id,
       _role: "admin",
     });
@@ -67,7 +79,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Authenticated user:", user.email, "Role check passed");
+    console.log("Role check passed for:", user.email);
 
     const { action, title, content, category } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
