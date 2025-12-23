@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +22,9 @@ import {
   Loader2,
   Sparkles,
   Wand2,
+  Upload,
+  X,
+  ImageIcon,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -62,6 +65,8 @@ const ArticleEditor = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isEditing) {
@@ -118,6 +123,71 @@ const ArticleEditor = () => {
       title,
       slug: isEditing ? prev.slug : generateSlug(title),
     }));
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Možete uploadovati samo slike.",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Maksimalna veličina slike je 5MB.",
+      });
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `covers/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("article-images")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("article-images")
+        .getPublicUrl(filePath);
+
+      setForm((prev) => ({ ...prev, cover_image: urlData.publicUrl }));
+
+      toast({
+        title: "Slika uploadovana!",
+        description: "Naslovna slika je uspešno dodata.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Greška pri uploadu",
+        description: error.message || "Pokušajte ponovo.",
+      });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setForm((prev) => ({ ...prev, cover_image: "" }));
   };
 
   const handleAI = async (action: "generate" | "improve") => {
@@ -349,16 +419,78 @@ const ArticleEditor = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cover_image">Naslovna slika (URL)</Label>
-                <Input
-                  id="cover_image"
-                  value={form.cover_image}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, cover_image: e.target.value }))
-                  }
-                  placeholder="https://..."
-                  className="bg-background"
+                <Label>Naslovna slika</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
                 />
+                
+                {form.cover_image ? (
+                  <div className="relative rounded-lg overflow-hidden border border-border">
+                    <img
+                      src={form.cover_image}
+                      alt="Cover preview"
+                      className="w-full h-48 object-cover"
+                    />
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="secondary"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                      >
+                        <Upload className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="destructive"
+                        onClick={handleRemoveImage}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => !uploading && fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                  >
+                    {uploading ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Uploadovanje...</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Kliknite da uploadujete sliku
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          PNG, JPG, WebP do 5MB
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-muted-foreground">ili</span>
+                  <Input
+                    id="cover_image"
+                    value={form.cover_image}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, cover_image: e.target.value }))
+                    }
+                    placeholder="Unesite URL slike"
+                    className="bg-background text-sm"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
