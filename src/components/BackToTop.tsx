@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
 export const BackToTop = () => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -38,23 +36,21 @@ export const BackToTop = () => {
   }
 
   return (
-    <div className="fixed bottom-8 right-8 z-50 flex flex-col gap-2 animate-fade-in-up">
-      <Button
+    <div className="fixed bottom-8 right-8 z-50 flex flex-col gap-3 animate-fade-in-up">
+      <button
         onClick={scrollToTop}
-        className="rounded-md w-12 h-12 p-0 shadow-glow bg-back-to-top hover:bg-back-to-top/90"
-        size="icon"
+        className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-md border border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_48px_rgba(0,0,0,0.2)] hover:bg-background/95 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center group"
         aria-label="Nazad na vrh"
       >
-        <ChevronUp className="w-6 h-6 text-white" />
-      </Button>
-      <Button
+        <ChevronUp className="w-5 h-5 text-foreground/70 group-hover:text-primary transition-colors" />
+      </button>
+      <button
         onClick={scrollToBottom}
-        className="rounded-md w-12 h-12 p-0 shadow-glow bg-back-to-top hover:bg-back-to-top/90"
-        size="icon"
+        className="w-12 h-12 rounded-full bg-background/80 backdrop-blur-md border border-border/50 shadow-[0_8px_32px_rgba(0,0,0,0.12)] hover:shadow-[0_12px_48px_rgba(0,0,0,0.2)] hover:bg-background/95 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center group"
         aria-label="Idi na dno"
       >
-        <ChevronDown className="w-6 h-6 text-white" />
-      </Button>
+        <ChevronDown className="w-5 h-5 text-foreground/70 group-hover:text-primary transition-colors" />
+      </button>
     </div>
   );
 };
