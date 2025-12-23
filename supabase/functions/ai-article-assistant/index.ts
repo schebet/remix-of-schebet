@@ -7,6 +7,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+interface AIResource {
+  name: string;
+  content: string;
+  type: string;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -81,11 +87,23 @@ serve(async (req) => {
 
     console.log("Role check passed for:", user.email);
 
-    const { action, title, content, category } = await req.json();
+    const { action, title, content, category, resources } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    // Build resources context if provided
+    let resourcesContext = "";
+    if (resources && Array.isArray(resources) && resources.length > 0) {
+      console.log(`Processing ${resources.length} resource(s)`);
+      resourcesContext = "\n\n--- DODATNI RESURSI ZA KORIŠĆENJE ---\n";
+      (resources as AIResource[]).forEach((resource, index) => {
+        resourcesContext += `\n[Resurs ${index + 1}: ${resource.name}]\n`;
+        resourcesContext += resource.content;
+        resourcesContext += "\n---\n";
+      });
     }
 
     let systemPrompt = "";
@@ -100,6 +118,7 @@ Tvoj stil:
 - Uključuješ lokalne detalje i kontekst
 - Članci su strukturirani sa jasnim paragrafima
 - Koristiš Markdown formatiranje (## za podnaslove, **bold** za isticanje)
+${resourcesContext ? "\nIMAS PRISTUP DODATNIM RESURSIMA KOJE SI DOBIO. KORISTI TE INFORMACIJE ZA PISANJE ČLANKA. Integriši te podatke prirodno u tekst." : ""}
 
 Uvek vraćaš JSON sa poljem "content" (tekst članka) i "excerpt" (kratak opis do 160 karaktera).`;
 
@@ -109,6 +128,7 @@ Uvek vraćaš JSON sa poljem "content" (tekst članka) i "excerpt" (kratak opis 
 - Uvod koji privlači pažnju
 - 2-3 sekcije sa podnaslovima
 - Zaključak
+${resourcesContext ? `\nKoristi sledeće resurse kao izvor informacija:${resourcesContext}` : ""}
 
 Vrati isključivo validan JSON format:
 {"content": "tekst članka u Markdown formatu", "excerpt": "kratak opis"}`;
@@ -118,6 +138,7 @@ Vrati isključivo validan JSON format:
 - Stilski dotjeran
 - Čitljiviji i zanimljiviji
 - Bolje strukturiran
+${resourcesContext ? "\nIMAS PRISTUP DODATNIM RESURSIMA KOJE SI DOBIO. KORISTI TE INFORMACIJE ZA OBOGAĆIVANJE I POBOLJŠANJE TEKSTA. Dodaj relevantne informacije iz resursa ako su prikladne." : ""}
 
 Zadržavaš originalni smisao i ton teksta.
 Uvek vraćaš JSON sa poljem "content" (poboljšan tekst).`;
@@ -125,12 +146,15 @@ Uvek vraćaš JSON sa poljem "content" (poboljšan tekst).`;
       userPrompt = `Poboljšaj sledeći tekst:
 
 ${content}
+${resourcesContext ? `\nMožeš koristiti sledeće resurse za obogaćivanje teksta:${resourcesContext}` : ""}
 
 Vrati isključivo validan JSON format:
 {"content": "poboljšan tekst u Markdown formatu"}`;
     } else {
       throw new Error("Nepoznata akcija");
     }
+
+    console.log("Calling AI gateway with action:", action, resourcesContext ? `(with ${resources.length} resources)` : "(no resources)");
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -200,6 +224,8 @@ Vrati isključivo validan JSON format:
       // If parsing fails, return the raw content
       result = { content: aiResponse };
     }
+
+    console.log("AI response processed successfully");
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
