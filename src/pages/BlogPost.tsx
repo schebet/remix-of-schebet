@@ -1,32 +1,114 @@
 import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { BackToTop } from "@/components/BackToTop";
 import { SocialShare } from "@/components/SocialShare";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { supabase } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Calendar, User, ArrowLeft, Tag, ArrowRight } from "lucide-react";
-import { blogPosts as blogPostsData, getCategoryColor } from "@/data/blogPosts";
+import { Calendar, User, ArrowLeft, Tag, ArrowRight, Loader2 } from "lucide-react";
+import { getCategoryColor } from "@/data/blogPosts";
+
+interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content: string;
+  cover_image: string | null;
+  category: string | null;
+  published_at: string | null;
+  author_id: string | null;
+}
 
 const BlogPost = () => {
-  const { id } = useParams();
-  const post = blogPostsData.find((p) => p.id === Number(id));
+  const { slug } = useParams();
+  const [article, setArticle] = useState<Article | null>(null);
+  const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  const getRelatedPosts = () => {
-    if (!post) return [];
-    return blogPostsData
-      .filter((p) => p.category === post.category && p.id !== post.id)
-      .slice(0, 3);
+  useEffect(() => {
+    const fetchArticle = async () => {
+      setLoading(true);
+      setNotFound(false);
+
+      const { data, error } = await supabase
+        .from("articles")
+        .select("*")
+        .eq("slug", slug)
+        .eq("status", "published")
+        .maybeSingle();
+
+      if (error || !data) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
+      setArticle(data);
+
+      // Fetch related articles from same category
+      if (data.category) {
+        const { data: related } = await supabase
+          .from("articles")
+          .select("*")
+          .eq("status", "published")
+          .eq("category", data.category)
+          .neq("id", data.id)
+          .limit(3);
+
+        setRelatedArticles(related || []);
+      }
+
+      setLoading(false);
+    };
+
+    if (slug) {
+      fetchArticle();
+    }
+  }, [slug]);
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "";
+    return new Date(dateString).toLocaleDateString("sr-Latn-RS", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
   };
 
-  const relatedPosts = getRelatedPosts();
+  const getCategoryLabel = (category: string | null) => {
+    const categories: Record<string, string> = {
+      istorija: "Istorija",
+      kultura: "Kultura",
+      ljudi: "Ljudi",
+      priroda: "Priroda",
+      gastronomija: "Gastronomija",
+      arhitektura: "Arhitektura",
+    };
+    return category ? categories[category] || category : "";
+  };
 
-  if (!post) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <main className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (notFound || !article) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navigation />
@@ -46,29 +128,32 @@ const BlogPost = () => {
     );
   }
 
-  const fullUrl = `${window.location.origin}/blog/${post.id}`;
-  const ogImageUrl = `${window.location.origin}${post.ogImage}`;
+  const fullUrl = `${window.location.origin}/blog/${article.slug}`;
+  const ogImageUrl = article.cover_image || "";
 
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
-        <title>{post.title} - Selo Šebet</title>
-        <meta name="description" content={post.excerpt} />
+        <title>{article.title} - Selo Šebet</title>
+        <meta name="description" content={article.excerpt || ""} />
         
         {/* Open Graph */}
         <meta property="og:type" content="article" />
-        <meta property="og:title" content={post.title} />
-        <meta property="og:description" content={post.excerpt} />
+        <meta property="og:title" content={article.title} />
+        <meta property="og:description" content={article.excerpt || ""} />
         <meta property="og:image" content={ogImageUrl} />
         <meta property="og:url" content={fullUrl} />
-        <meta property="article:published_time" content={post.date} />
-        <meta property="article:author" content={post.author} />
-        <meta property="article:section" content={post.category} />
+        {article.published_at && (
+          <meta property="article:published_time" content={article.published_at} />
+        )}
+        {article.category && (
+          <meta property="article:section" content={getCategoryLabel(article.category)} />
+        )}
         
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={post.title} />
-        <meta name="twitter:description" content={post.excerpt} />
+        <meta name="twitter:title" content={article.title} />
+        <meta name="twitter:description" content={article.excerpt || ""} />
         <meta name="twitter:image" content={ogImageUrl} />
       </Helmet>
 
@@ -78,8 +163,8 @@ const BlogPost = () => {
           <Breadcrumbs 
             items={[
               { label: 'Blog', href: '/#blog' },
-              { label: post.category, href: '/#blog' },
-              { label: post.title }
+              { label: getCategoryLabel(article.category), href: '/#blog' },
+              { label: article.title }
             ]} 
           />
 
@@ -87,158 +172,84 @@ const BlogPost = () => {
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                <span>{post.date}</span>
+                <span>{formatDate(article.published_at)}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                <span>{post.author}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Tag className="w-4 h-4" />
-                <Badge variant="outline" className={`border ${getCategoryColor(post.category)}`}>
-                  {post.category}
-                </Badge>
-              </div>
+              {article.category && (
+                <div className="flex items-center gap-2">
+                  <Tag className="w-4 h-4" />
+                  <Badge variant="outline" className={`border ${getCategoryColor(article.category)}`}>
+                    {getCategoryLabel(article.category)}
+                  </Badge>
+                </div>
+              )}
             </div>
 
             <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gradient-primary">
-              {post.title}
+              {article.title}
             </h1>
 
-            <p className="text-xl text-muted-foreground leading-relaxed mb-8">
-              {post.excerpt}
-            </p>
+            {article.excerpt && (
+              <p className="text-xl text-muted-foreground leading-relaxed mb-8">
+                {article.excerpt}
+              </p>
+            )}
 
             {/* Social Share */}
             <div className="mb-8 pb-8 border-b border-border">
               <SocialShare 
-                url={`/blog/${post.id}`}
-                title={post.title}
-                description={post.excerpt}
+                url={`/blog/${article.slug}`}
+                title={article.title}
+                description={article.excerpt || ""}
               />
             </div>
 
-            <AspectRatio ratio={16 / 9} className="overflow-hidden rounded-lg mb-8">
-              <img
-                src={post.imageUrl}
-                alt={post.title}
-                className="object-cover w-full h-full"
-              />
-            </AspectRatio>
+            {article.cover_image && (
+              <AspectRatio ratio={16 / 9} className="overflow-hidden rounded-lg mb-8">
+                <img
+                  src={article.cover_image}
+                  alt={article.title}
+                  className="object-cover w-full h-full"
+                />
+              </AspectRatio>
+            )}
           </div>
 
           <div 
-            className="prose prose-lg max-w-none animate-fade-in-up"
+            className="prose prose-lg max-w-none animate-fade-in-up dark:prose-invert"
             style={{ animationDelay: "0.1s" }}
-          >
-            {post.content.map((block, index) => {
-              if (block.type === 'text') {
-                return (
-                  <div 
-                    key={index}
-                    dangerouslySetInnerHTML={{ __html: block.html || '' }}
-                  />
-                );
-              }
-              
-              if (block.type === 'image') {
-                return (
-                  <figure key={index} className="my-8">
-                    <AspectRatio ratio={16 / 9} className="overflow-hidden rounded-lg">
-                      <img
-                        src={block.src}
-                        srcSet={block.srcset}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1024px) 768px, 896px"
-                        alt={block.alt}
-                        loading="lazy"
-                        className="object-cover w-full h-full"
-                      />
-                    </AspectRatio>
-                    {block.caption && (
-                      <figcaption className="text-sm text-muted-foreground text-center mt-3 italic">
-                        {block.caption}
-                      </figcaption>
-                    )}
-                  </figure>
-                );
-              }
-
-              if (block.type === 'video') {
-                const getEmbedUrl = () => {
-                  if (block.videoProvider === 'youtube') {
-                    const videoId = block.videoUrl?.split('v=')[1]?.split('&')[0];
-                    return `https://www.youtube.com/embed/${videoId}`;
-                  }
-                  if (block.videoProvider === 'vimeo') {
-                    const videoId = block.videoUrl?.split('/').pop();
-                    return `https://player.vimeo.com/video/${videoId}`;
-                  }
-                  return block.videoUrl;
-                };
-
-                return (
-                  <figure key={index} className="my-8">
-                    <AspectRatio ratio={16 / 9} className="overflow-hidden rounded-lg bg-muted">
-                      <iframe
-                        src={getEmbedUrl()}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </AspectRatio>
-                    {block.caption && (
-                      <figcaption className="text-sm text-muted-foreground text-center mt-3 italic">
-                        {block.caption}
-                      </figcaption>
-                    )}
-                  </figure>
-                );
-              }
-
-              if (block.type === 'quote') {
-                return (
-                  <blockquote key={index} className="my-8 border-l-4 border-primary pl-6 py-4 italic">
-                    <p className="text-xl text-foreground mb-2">{block.quoteText}</p>
-                    {block.quoteAuthor && (
-                      <footer className="text-sm text-muted-foreground not-italic">
-                        — {block.quoteAuthor}
-                      </footer>
-                    )}
-                  </blockquote>
-                );
-              }
-              
-              return null;
-            })}
-          </div>
+            dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br/>') }}
+          />
         </article>
 
-
-        <article className="container mx-auto px-4 max-w-4xl">
-          {relatedPosts.length > 0 && (
+        <div className="container mx-auto px-4 max-w-4xl">
+          {relatedArticles.length > 0 && (
             <div className="mt-16 pt-8 border-t border-border">
               <h2 className="text-3xl font-bold mb-8 text-gradient-primary">Srodni članci</h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {relatedPosts.map((relatedPost) => (
+                {relatedArticles.map((relatedPost) => (
                   <Card key={relatedPost.id} className="flex flex-col overflow-hidden hover-scale">
-                    <AspectRatio ratio={16 / 9} className="overflow-hidden">
-                      <img
-                        src={relatedPost.imageUrl}
-                        alt={relatedPost.title}
-                        className="object-cover w-full h-full transition-transform duration-300 hover:scale-110"
-                      />
-                    </AspectRatio>
+                    {relatedPost.cover_image && (
+                      <AspectRatio ratio={16 / 9} className="overflow-hidden">
+                        <img
+                          src={relatedPost.cover_image}
+                          alt={relatedPost.title}
+                          className="object-cover w-full h-full transition-transform duration-300 hover:scale-110"
+                        />
+                      </AspectRatio>
+                    )}
                     <CardHeader>
-                      <Badge variant="outline" className={`w-fit mb-2 border ${getCategoryColor(relatedPost.category)}`}>
-                        {relatedPost.category}
-                      </Badge>
+                      {relatedPost.category && (
+                        <Badge variant="outline" className={`w-fit mb-2 border ${getCategoryColor(relatedPost.category)}`}>
+                          {getCategoryLabel(relatedPost.category)}
+                        </Badge>
+                      )}
                       <CardTitle className="text-xl line-clamp-2">{relatedPost.title}</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1">
                       <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
                         {relatedPost.excerpt}
                       </p>
-                      <Link to={`/blog/${relatedPost.id}`}>
+                      <Link to={`/blog/${relatedPost.slug}`}>
                         <Button variant="ghost" size="sm" className="w-full">
                           Pročitaj više
                           <ArrowRight className="w-4 h-4 ml-2" />
@@ -259,7 +270,7 @@ const BlogPost = () => {
               </Button>
             </Link>
           </div>
-        </article>
+        </div>
       </main>
       <BackToTop />
       <Footer />
