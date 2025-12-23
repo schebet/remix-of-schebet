@@ -193,10 +193,12 @@ const ArticleEditor = () => {
   const handleAI = async (action: "generate" | "improve") => {
     setAiLoading(action);
     try {
-      // Get user's session token for authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
+      // Ensure user is logged in (invoke will attach the token automatically)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
         toast({
           variant: "destructive",
           title: "Greška",
@@ -206,35 +208,52 @@ const ArticleEditor = () => {
         return;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-article-assistant`,
+      const { data: functionData, error } = await supabase.functions.invoke(
+        "ai-article-assistant",
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
+          body: {
             action,
             title: form.title,
             content: form.content,
             category: form.category,
-          }),
+          },
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "AI greška");
+      if (error) {
+        let message = error.message || "AI greška";
+        const resp = (error as any)?.context as Response | undefined;
+
+        if (resp) {
+          const status = resp.status;
+          if (status === 429) {
+            message = "Previše zahteva. Pokušajte ponovo za minut.";
+          } else if (status === 402) {
+            message = "AI krediti su potrošeni.";
+          } else {
+            try {
+              const errJson = await resp.clone().json();
+              if (errJson?.error) message = errJson.error;
+            } catch {
+              // ignore
+            }
+          }
+        }
+
+        throw new Error(message);
       }
 
-      const data = await response.json();
+      const responseData = functionData as any;
+
+      if (!responseData?.content) {
+        throw new Error("AI greška: prazan odgovor.");
+      }
 
       if (action === "generate") {
         setForm((prev) => ({
           ...prev,
-          content: data.content,
-          excerpt: data.excerpt || prev.excerpt,
+          content: responseData.content,
+          excerpt: responseData.excerpt || prev.excerpt,
         }));
         toast({
           title: "Članak generisan!",
@@ -243,7 +262,7 @@ const ArticleEditor = () => {
       } else {
         setForm((prev) => ({
           ...prev,
-          content: data.content,
+          content: responseData.content,
         }));
         toast({
           title: "Članak poboljšan!",
