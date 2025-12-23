@@ -42,6 +42,15 @@ export const getCategoryColor = (category: string) => {
     "Priroda": "bg-category-nature/10 text-category-nature border-category-nature/20",
     "Gastronomija": "bg-category-gastronomy/10 text-category-gastronomy border-category-gastronomy/20",
     "Arhitektura": "bg-category-architecture/10 text-category-architecture border-category-architecture/20",
+    "Tradicija": "bg-category-tradition/10 text-category-tradition border-category-tradition/20",
+    "Događaji": "bg-category-events/10 text-category-events border-category-events/20",
+    "Turizam": "bg-category-tourism/10 text-category-tourism border-category-tourism/20",
+    "Religija": "bg-category-religion/10 text-category-religion border-category-religion/20",
+    "Sport i rekreacija": "bg-category-sports/10 text-category-sports border-category-sports/20",
+    "Umetnost": "bg-category-art/10 text-category-art border-category-art/20",
+    "Privreda": "bg-category-economy/10 text-category-economy border-category-economy/20",
+    "O imenu sela Šebet": "bg-category-village-name/10 text-category-village-name border-category-village-name/20",
+    "Ostalo": "bg-category-other/10 text-category-other border-category-other/20",
   };
-  return colors[category] || "bg-primary/10 text-primary border-primary/20";
+  return colors[category] || "bg-category-other/10 text-category-other border-category-other/20";
 };

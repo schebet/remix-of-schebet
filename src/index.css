@@ -38,6 +38,15 @@ All colors MUST be HSL.
     --category-nature: 159 61% 44%;
     --category-gastronomy: 24 95% 53%;
     --category-architecture: 38 92% 50%;
+    --category-tradition: 340 82% 52%;
+    --category-events: 291 64% 50%;
+    --category-tourism: 199 89% 48%;
+    --category-religion: 262 52% 47%;
+    --category-sports: 142 76% 36%;
+    --category-art: 328 81% 54%;
+    --category-economy: 45 93% 47%;
+    --category-village-name: 340 100% 40%;
+    --category-other: 220 14% 46%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
@@ -99,6 +108,15 @@ All colors MUST be HSL.
     --category-nature: 159 61% 44%;
     --category-gastronomy: 24 95% 53%;
     --category-architecture: 38 92% 50%;
+    --category-tradition: 340 82% 52%;
+    --category-events: 291 64% 50%;
+    --category-tourism: 199 89% 48%;
+    --category-religion: 262 52% 47%;
+    --category-sports: 142 76% 36%;
+    --category-art: 328 81% 54%;
+    --category-economy: 45 93% 47%;
+    --category-village-name: 340 100% 40%;
+    --category-other: 220 14% 46%;
 
     --destructive: 0 62.8% 50%;
     --destructive-foreground: 0 0% 100%;
