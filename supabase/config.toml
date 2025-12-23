@@ -1,4 +1,1 @@
 project_id = "geflwjxcposyetxrmbcq"
-
-[functions.ai-article-assistant]
-verify_jwt = false
