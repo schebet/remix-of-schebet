@@ -193,13 +193,26 @@ const ArticleEditor = () => {
   const handleAI = async (action: "generate" | "improve") => {
     setAiLoading(action);
     try {
+      // Get user's session token for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        toast({
+          variant: "destructive",
+          title: "Greška",
+          description: "Morate biti prijavljeni za korišćenje AI asistenta.",
+        });
+        setAiLoading(null);
+        return;
+      }
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-article-assistant`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             action,
