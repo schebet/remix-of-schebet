@@ -130,8 +130,17 @@ const BlogPost = () => {
     );
   }
 
-  const fullUrl = `${window.location.origin}/blog/${article.slug}`;
-  const ogImageUrl = article.cover_image || "";
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sebet.lovable.app';
+  const fullUrl = `${siteUrl}/blog/${article.slug}`;
+  
+  // OG image must be absolute URL for Facebook
+  const getAbsoluteImageUrl = (imageUrl: string | null) => {
+    if (!imageUrl) return `${siteUrl}/og-images/default.jpg`;
+    if (imageUrl.startsWith('http')) return imageUrl;
+    return `${siteUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+  };
+  
+  const ogImageUrl = getAbsoluteImageUrl(article.cover_image);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -144,7 +153,10 @@ const BlogPost = () => {
         <meta property="og:title" content={article.title} />
         <meta property="og:description" content={article.excerpt || ""} />
         <meta property="og:image" content={ogImageUrl} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta property="og:url" content={fullUrl} />
+        <meta property="og:site_name" content="Selo Šebet" />
         {article.published_at && (
           <meta property="article:published_time" content={article.published_at} />
         )}
