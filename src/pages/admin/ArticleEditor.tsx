@@ -28,6 +28,8 @@ import {
   ShieldCheck,
   ShieldX,
   ShieldAlert,
+  FileText,
+  Trash2,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -48,6 +50,12 @@ interface ArticleForm {
   cover_image: string;
   category: string;
   status: string;
+}
+
+interface AIResource {
+  name: string;
+  content: string;
+  type: string;
 }
 
 const ArticleEditor = () => {
@@ -76,6 +84,9 @@ const ArticleEditor = () => {
     hasPermission: boolean;
     role: string | null;
   }>({ checked: false, loading: false, hasPermission: false, role: null });
+  const [aiResources, setAiResources] = useState<AIResource[]>([]);
+  const [resourceUploading, setResourceUploading] = useState(false);
+  const resourceInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -241,6 +252,85 @@ const ArticleEditor = () => {
     setForm((prev) => ({ ...prev, cover_image: "" }));
   };
 
+  const handleResourceUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setResourceUploading(true);
+
+    const newResources: AIResource[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Validate file type - only text-based files
+      const allowedTypes = [
+        'text/plain',
+        'text/markdown',
+        'text/html',
+        'text/csv',
+        'application/json',
+        'application/xml',
+        'text/xml',
+      ];
+      
+      const allowedExtensions = ['.txt', '.md', '.html', '.csv', '.json', '.xml', '.doc', '.rtf'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+        toast({
+          variant: "destructive",
+          title: "Nepodržan format",
+          description: `Fajl "${file.name}" nije podržan. Koristite txt, md, html, csv, json ili xml.`,
+        });
+        continue;
+      }
+
+      // Validate file size (max 1MB per file)
+      if (file.size > 1 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "Prevelik fajl",
+          description: `Fajl "${file.name}" je veći od 1MB.`,
+        });
+        continue;
+      }
+
+      try {
+        const content = await file.text();
+        newResources.push({
+          name: file.name,
+          content: content.slice(0, 50000), // Limit content to 50k chars
+          type: file.type || 'text/plain',
+        });
+      } catch (error) {
+        console.error("Error reading file:", file.name, error);
+        toast({
+          variant: "destructive",
+          title: "Greška pri čitanju",
+          description: `Nije moguće pročitati fajl "${file.name}".`,
+        });
+      }
+    }
+
+    if (newResources.length > 0) {
+      setAiResources((prev) => [...prev, ...newResources]);
+      toast({
+        title: "Resursi dodati",
+        description: `Dodato ${newResources.length} resurs(a) za AI.`,
+      });
+    }
+
+    setResourceUploading(false);
+    if (resourceInputRef.current) {
+      resourceInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveResource = (index: number) => {
+    setAiResources((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleAI = async (action: "generate" | "improve") => {
     setAiLoading(action);
     try {
@@ -267,6 +357,7 @@ const ArticleEditor = () => {
             title: form.title,
             content: form.content,
             category: form.category,
+            resources: aiResources.length > 0 ? aiResources : undefined,
           },
         }
       );
@@ -656,33 +747,95 @@ const ArticleEditor = () => {
                 AI Asistent
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
-              <Button
-                variant="outline"
-                onClick={() => handleAI("generate")}
-                disabled={!form.title || aiLoading !== null}
-                className="border-primary/30 hover:bg-primary/10"
-              >
-                {aiLoading === "generate" ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4 mr-2" />
+            <CardContent className="space-y-4">
+              {/* AI Resources Upload */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Resursi za AI (opciono)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Uploadujte fajlove sa podacima koje će AI koristiti za generisanje/poboljšanje članka.
+                </p>
+                
+                <input
+                  ref={resourceInputRef}
+                  type="file"
+                  accept=".txt,.md,.html,.csv,.json,.xml,.doc,.rtf"
+                  multiple
+                  onChange={handleResourceUpload}
+                  className="hidden"
+                />
+                
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => resourceInputRef.current?.click()}
+                    disabled={resourceUploading}
+                    className="border-dashed"
+                  >
+                    {resourceUploading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    Dodaj resurse
+                  </Button>
+                </div>
+                
+                {aiResources.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {aiResources.map((resource, index) => (
+                      <div
+                        key={index}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                      >
+                        <FileText className="h-3 w-3" />
+                        <span className="max-w-[150px] truncate">{resource.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveResource(index)}
+                          className="ml-1 hover:text-destructive transition-colors"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 )}
-                Generiši članak
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleAI("improve")}
-                disabled={!form.content || aiLoading !== null}
-                className="border-accent/30 hover:bg-accent/10"
-              >
-                {aiLoading === "improve" ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Wand2 className="h-4 w-4 mr-2" />
-                )}
-                Poboljšaj tekst
-              </Button>
+              </div>
+              
+              {/* AI Action Buttons */}
+              <div className="flex flex-wrap gap-3 pt-2 border-t border-border/50">
+                <Button
+                  variant="outline"
+                  onClick={() => handleAI("generate")}
+                  disabled={!form.title || aiLoading !== null}
+                  className="border-primary/30 hover:bg-primary/10"
+                >
+                  {aiLoading === "generate" ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2" />
+                  )}
+                  Generiši članak
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleAI("improve")}
+                  disabled={!form.content || aiLoading !== null}
+                  className="border-accent/30 hover:bg-accent/10"
+                >
+                  {aiLoading === "improve" ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4 mr-2" />
+                  )}
+                  Poboljšaj tekst
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
