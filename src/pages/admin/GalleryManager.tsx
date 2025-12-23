@@ -44,7 +44,23 @@ interface GalleryImage {
   created_at: string;
 }
 
-const CATEGORIES = ["Arhitektura", "Istorija", "Priroda", "Kultura", "Ostalo"];
+const CATEGORIES = [
+  "Istorija",
+  "Kultura", 
+  "Ljudi",
+  "Priroda",
+  "Gastronomija",
+  "Arhitektura",
+  "Tradicija",
+  "Događaji",
+  "Turizam",
+  "Religija",
+  "Sport i rekreacija",
+  "Umetnost",
+  "Privreda",
+  "O imenu sela Šebet",
+  "Ostalo",
+];
 
 const GalleryManager = () => {
   const [images, setImages] = useState<GalleryImage[]>([]);

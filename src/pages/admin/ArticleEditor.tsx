@@ -40,6 +40,15 @@ const CATEGORIES = [
   { value: "priroda", label: "Priroda" },
   { value: "gastronomija", label: "Gastronomija" },
   { value: "arhitektura", label: "Arhitektura" },
+  { value: "tradicija", label: "Tradicija" },
+  { value: "dogadjaji", label: "Događaji" },
+  { value: "turizam", label: "Turizam" },
+  { value: "religija", label: "Religija" },
+  { value: "sport-rekreacija", label: "Sport i rekreacija" },
+  { value: "umetnost", label: "Umetnost" },
+  { value: "privreda", label: "Privreda" },
+  { value: "o-imenu-sela-sebet", label: "O imenu sela Šebet" },
+  { value: "ostalo", label: "Ostalo" },
 ];
 
 interface ArticleForm {
