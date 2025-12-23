@@ -7,12 +7,14 @@ import { BackToTop } from "@/components/BackToTop";
 import { SocialShare } from "@/components/SocialShare";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { supabase } from "@/integrations/supabase/client";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
-import { Calendar, User, ArrowLeft, Tag, ArrowRight, Loader2 } from "lucide-react";
+import { Calendar, ArrowLeft, Tag, ArrowRight, Loader2 } from "lucide-react";
 import { getCategoryColor } from "@/data/blogPosts";
 
 interface Article {
@@ -215,10 +217,13 @@ const BlogPost = () => {
           </div>
 
           <div 
-            className="prose prose-lg max-w-none animate-fade-in-up dark:prose-invert"
+            className="prose prose-lg max-w-none animate-fade-in-up dark:prose-invert prose-headings:text-foreground prose-p:text-foreground/90 prose-strong:text-foreground prose-a:text-primary hover:prose-a:text-primary/80 prose-blockquote:border-primary prose-blockquote:text-muted-foreground prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-muted"
             style={{ animationDelay: "0.1s" }}
-            dangerouslySetInnerHTML={{ __html: article.content.replace(/\n/g, '<br/>') }}
-          />
+          >
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {article.content}
+            </ReactMarkdown>
+          </div>
         </article>
 
         <div className="container mx-auto px-4 max-w-4xl">
