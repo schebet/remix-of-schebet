@@ -14,6 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
@@ -30,6 +39,7 @@ import {
   ShieldAlert,
   FileText,
   Trash2,
+  ImagePlus,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -95,8 +105,14 @@ const ArticleEditor = () => {
   }>({ checked: false, loading: false, hasPermission: false, role: null });
   const [aiResources, setAiResources] = useState<AIResource[]>([]);
   const [resourceUploading, setResourceUploading] = useState(false);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<{ id: string; title: string; image_url: string }[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [inlineUploading, setInlineUploading] = useState(false);
   const resourceInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inlineImageInputRef = useRef<HTMLInputElement>(null);
+  const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isEditing) {
@@ -374,6 +390,106 @@ const ArticleEditor = () => {
 
   const handleRemoveResource = (index: number) => {
     setAiResources((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const fetchGalleryImages = async () => {
+    setGalleryLoading(true);
+    const { data, error } = await supabase
+      .from("gallery_images")
+      .select("id, title, image_url")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setGalleryImages(data);
+    }
+    setGalleryLoading(false);
+  };
+
+  const handleOpenImageDialog = () => {
+    setImageDialogOpen(true);
+    if (galleryImages.length === 0) {
+      fetchGalleryImages();
+    }
+  };
+
+  const insertImageAtCursor = (imageUrl: string, altText: string) => {
+    const markdown = `\n![${altText}](${imageUrl})\n`;
+    const textarea = contentTextareaRef.current;
+    
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newContent = form.content.substring(0, start) + markdown + form.content.substring(end);
+      setForm((prev) => ({ ...prev, content: newContent }));
+      
+      // Set cursor position after inserted image
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + markdown.length, start + markdown.length);
+      }, 0);
+    } else {
+      setForm((prev) => ({ ...prev, content: prev.content + markdown }));
+    }
+    
+    setImageDialogOpen(false);
+    toast({
+      title: "Slika ubačena",
+      description: "Slika je dodata u tekst članka.",
+    });
+  };
+
+  const handleInlineImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Možete uploadovati samo slike.",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Maksimalna veličina slike je 5MB.",
+      });
+      return;
+    }
+
+    setInlineUploading(true);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `inline/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("article-images")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("article-images")
+        .getPublicUrl(filePath);
+
+      insertImageAtCursor(urlData.publicUrl, file.name.replace(/\.[^/.]+$/, ""));
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Greška pri uploadu",
+        description: error.message || "Pokušajte ponovo.",
+      });
+    } finally {
+      setInlineUploading(false);
+      if (inlineImageInputRef.current) {
+        inlineImageInputRef.current.value = "";
+      }
+    }
   };
 
   const handleAI = async (action: "generate" | "improve") => {
@@ -886,11 +1002,102 @@ const ArticleEditor = () => {
 
           {/* Content */}
           <Card className="border-border/50">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Sadržaj *</CardTitle>
+              <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenImageDialog}
+                    className="gap-2"
+                  >
+                    <ImagePlus className="h-4 w-4" />
+                    Ubaci sliku
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Ubaci sliku u tekst</DialogTitle>
+                  </DialogHeader>
+                  <Tabs defaultValue="gallery" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="gallery">Iz galerije</TabsTrigger>
+                      <TabsTrigger value="upload">Upload nove</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="gallery" className="mt-4">
+                      {galleryLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        </div>
+                      ) : galleryImages.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                          <p>Nema slika u galeriji</p>
+                        </div>
+                      ) : (
+                        <ScrollArea className="h-[300px]">
+                          <div className="grid grid-cols-3 gap-2 p-1">
+                            {galleryImages.map((img) => (
+                              <button
+                                key={img.id}
+                                type="button"
+                                onClick={() => insertImageAtCursor(img.image_url, img.title)}
+                                className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-colors group"
+                              >
+                                <img
+                                  src={img.image_url}
+                                  alt={img.title}
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <span className="text-xs font-medium text-center px-2 line-clamp-2">
+                                    {img.title}
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      )}
+                    </TabsContent>
+                    <TabsContent value="upload" className="mt-4">
+                      <input
+                        ref={inlineImageInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleInlineImageUpload}
+                        className="hidden"
+                      />
+                      <div
+                        onClick={() => !inlineUploading && inlineImageInputRef.current?.click()}
+                        className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                      >
+                        {inlineUploading ? (
+                          <div className="flex flex-col items-center gap-2">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">Uploadovanje...</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2">
+                            <Upload className="h-8 w-8 text-muted-foreground" />
+                            <p className="text-sm text-muted-foreground">
+                              Kliknite da uploadujete sliku
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              PNG, JPG, WebP do 5MB
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               <Textarea
+                ref={contentTextareaRef}
                 value={form.content}
                 onChange={(e) =>
                   setForm((prev) => ({ ...prev, content: e.target.value }))
@@ -899,7 +1106,7 @@ const ArticleEditor = () => {
                 className="bg-background resize-none min-h-[400px] font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                Podržava Markdown formatiranje
+                Podržava Markdown formatiranje. Slike: ![opis](url)
               </p>
             </CardContent>
           </Card>
