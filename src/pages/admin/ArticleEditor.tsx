@@ -25,7 +25,11 @@ import {
   Upload,
   X,
   ImageIcon,
+  ShieldCheck,
+  ShieldX,
+  ShieldAlert,
 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const CATEGORIES = [
   { value: "istorija", label: "Istorija" },
@@ -66,12 +70,20 @@ const ArticleEditor = () => {
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [roleCheck, setRoleCheck] = useState<{
+    checked: boolean;
+    loading: boolean;
+    hasPermission: boolean;
+    role: string | null;
+  }>({ checked: false, loading: false, hasPermission: false, role: null });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isEditing) {
       fetchArticle();
     }
+    // Auto-check role on mount
+    checkUserRole();
   }, [id]);
 
   const fetchArticle = async () => {
@@ -101,6 +113,45 @@ const ArticleEditor = () => {
       });
     }
     setLoading(false);
+  };
+
+  const checkUserRole = async () => {
+    if (!user) {
+      setRoleCheck({ checked: true, loading: false, hasPermission: false, role: null });
+      return;
+    }
+
+    setRoleCheck((prev) => ({ ...prev, loading: true }));
+
+    try {
+      // Check for admin role
+      const { data: isAdmin } = await supabase.rpc("has_role", {
+        _user_id: user.id,
+        _role: "admin",
+      });
+
+      if (isAdmin) {
+        setRoleCheck({ checked: true, loading: false, hasPermission: true, role: "admin" });
+        return;
+      }
+
+      // Check for author role
+      const { data: isAuthor } = await supabase.rpc("has_role", {
+        _user_id: user.id,
+        _role: "author",
+      });
+
+      if (isAuthor) {
+        setRoleCheck({ checked: true, loading: false, hasPermission: true, role: "author" });
+        return;
+      }
+
+      // No valid role
+      setRoleCheck({ checked: true, loading: false, hasPermission: false, role: null });
+    } catch (error) {
+      console.error("Role check error:", error);
+      setRoleCheck({ checked: true, loading: false, hasPermission: false, role: null });
+    }
   };
 
   const generateSlug = (title: string) => {
@@ -384,6 +435,44 @@ const ArticleEditor = () => {
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="grid gap-6">
+          {/* Role Check Alert */}
+          {roleCheck.checked && !roleCheck.hasPermission && (
+            <Alert variant="destructive">
+              <ShieldX className="h-4 w-4" />
+              <AlertTitle>Nemate dozvolu</AlertTitle>
+              <AlertDescription>
+                Nemate ulogu admin ili author. Kontaktirajte administratora za pristup.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {roleCheck.checked && roleCheck.hasPermission && (
+            <Alert className="border-green-500/50 bg-green-500/10">
+              <ShieldCheck className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-600">Uloga potvrđena</AlertTitle>
+              <AlertDescription className="text-green-600/80">
+                Vaša uloga: <span className="font-semibold capitalize">{roleCheck.role}</span>. Imate dozvolu za uređivanje članaka.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!roleCheck.checked && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={checkUserRole}
+                disabled={roleCheck.loading}
+              >
+                {roleCheck.loading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <ShieldAlert className="h-4 w-4 mr-2" />
+                )}
+                Proveri dozvole
+              </Button>
+            </div>
+          )}
           {/* Basic Info */}
           <Card className="border-border/50">
             <CardHeader>
