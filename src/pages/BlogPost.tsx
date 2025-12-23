@@ -130,17 +130,27 @@ const BlogPost = () => {
     );
   }
 
-  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sebet.lovable.app';
+  // Use fixed production URL for OG tags - Facebook crawler doesn't execute JS
+  const siteUrl = 'https://sebet.lovable.app';
   const fullUrl = `${siteUrl}/blog/${article.slug}`;
   
   // OG image must be absolute URL for Facebook
-  const getAbsoluteImageUrl = (imageUrl: string | null) => {
-    if (!imageUrl) return `${siteUrl}/og-images/default.jpg`;
-    if (imageUrl.startsWith('http')) return imageUrl;
+  // For Supabase storage URLs, use them directly as they are already absolute
+  // For relative paths, prefix with site URL
+  // For articles without cover image, use default OG image
+  const getOgImageUrl = (imageUrl: string | null) => {
+    if (!imageUrl) {
+      return `${siteUrl}/og-images/default.jpg`;
+    }
+    // Supabase storage URLs are already absolute
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+    // Relative paths need the site URL prefix
     return `${siteUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
   };
   
-  const ogImageUrl = getAbsoluteImageUrl(article.cover_image);
+  const ogImageUrl = getOgImageUrl(article.cover_image);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -153,8 +163,11 @@ const BlogPost = () => {
         <meta property="og:title" content={article.title} />
         <meta property="og:description" content={article.excerpt || ""} />
         <meta property="og:image" content={ogImageUrl} />
+        <meta property="og:image:secure_url" content={ogImageUrl} />
+        <meta property="og:image:type" content="image/jpeg" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content={article.title} />
         <meta property="og:url" content={fullUrl} />
         <meta property="og:site_name" content="Selo Šebet" />
         {article.published_at && (
