@@ -7,8 +7,8 @@ const stats = [{
   color: "text-secondary"
 }, {
   icon: Calendar,
-  value: "1450",
-  label: "Godina osnivanja",
+  value: "oko 1450",
+  label: "prvi put evidentirano u turskim popisima",
   color: "text-accent"
 }, {
   icon: Heart,
