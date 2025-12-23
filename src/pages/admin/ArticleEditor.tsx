@@ -272,37 +272,73 @@ const ArticleEditor = () => {
         'application/json',
         'application/xml',
         'text/xml',
+        'application/pdf',
       ];
       
-      const allowedExtensions = ['.txt', '.md', '.html', '.csv', '.json', '.xml', '.doc', '.rtf'];
+      const allowedExtensions = ['.txt', '.md', '.html', '.csv', '.json', '.xml', '.doc', '.rtf', '.pdf'];
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
       
       if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
         toast({
           variant: "destructive",
           title: "Nepodržan format",
-          description: `Fajl "${file.name}" nije podržan. Koristite txt, md, html, csv, json ili xml.`,
+          description: `Fajl "${file.name}" nije podržan. Koristite txt, md, html, csv, json, xml ili pdf.`,
         });
         continue;
       }
 
-      // Validate file size (max 1MB per file)
-      if (file.size > 1 * 1024 * 1024) {
+      // Validate file size (max 5MB for PDF, 1MB for others)
+      const maxSize = fileExtension === '.pdf' ? 5 * 1024 * 1024 : 1 * 1024 * 1024;
+      if (file.size > maxSize) {
         toast({
           variant: "destructive",
           title: "Prevelik fajl",
-          description: `Fajl "${file.name}" je veći od 1MB.`,
+          description: `Fajl "${file.name}" je veći od ${fileExtension === '.pdf' ? '5MB' : '1MB'}.`,
         });
         continue;
       }
 
       try {
-        const content = await file.text();
-        newResources.push({
-          name: file.name,
-          content: content.slice(0, 50000), // Limit content to 50k chars
-          type: file.type || 'text/plain',
-        });
+        // Handle PDF files differently
+        if (fileExtension === '.pdf' || file.type === 'application/pdf') {
+          // Convert PDF to base64 and send to edge function for parsing
+          const arrayBuffer = await file.arrayBuffer();
+          const base64 = btoa(
+            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+          
+          const { data: pdfData, error: pdfError } = await supabase.functions.invoke(
+            "parse-pdf",
+            {
+              body: {
+                pdfBase64: base64,
+                fileName: file.name,
+              },
+            }
+          );
+          
+          if (pdfError) {
+            throw new Error(pdfError.message || "Greška pri parsiranju PDF-a");
+          }
+          
+          if (pdfData?.content) {
+            newResources.push({
+              name: file.name,
+              content: pdfData.content,
+              type: 'application/pdf',
+            });
+          } else {
+            throw new Error("PDF nije vratio sadržaj");
+          }
+        } else {
+          // Handle text-based files normally
+          const content = await file.text();
+          newResources.push({
+            name: file.name,
+            content: content.slice(0, 50000),
+            type: file.type || 'text/plain',
+          });
+        }
       } catch (error) {
         console.error("Error reading file:", file.name, error);
         toast({
@@ -755,13 +791,13 @@ const ArticleEditor = () => {
                   Resursi za AI (opciono)
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Uploadujte fajlove sa podacima koje će AI koristiti za generisanje/poboljšanje članka.
+                  Uploadujte fajlove sa podacima koje će AI koristiti (txt, md, html, csv, json, xml, pdf).
                 </p>
                 
                 <input
                   ref={resourceInputRef}
                   type="file"
-                  accept=".txt,.md,.html,.csv,.json,.xml,.doc,.rtf"
+                  accept=".txt,.md,.html,.csv,.json,.xml,.doc,.rtf,.pdf"
                   multiple
                   onChange={handleResourceUpload}
                   className="hidden"
