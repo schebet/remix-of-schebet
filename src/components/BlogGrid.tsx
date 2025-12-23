@@ -12,24 +12,87 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
-import { Calendar, User, ArrowRight } from "lucide-react";
+import { Calendar, ArrowRight, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { blogPosts, getCategoryColor } from "@/data/blogPosts";
-import { getBlogCardSizes } from "@/lib/imageUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { getCategoryColor } from "@/data/blogPosts";
+
+interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  cover_image: string | null;
+  category: string | null;
+  published_at: string | null;
+}
 
 const POSTS_PER_PAGE = 6;
 
+const getCategoryLabel = (category: string | null) => {
+  const categories: Record<string, string> = {
+    istorija: "Istorija",
+    kultura: "Kultura",
+    ljudi: "Ljudi",
+    priroda: "Priroda",
+    gastronomija: "Gastronomija",
+    arhitektura: "Arhitektura",
+  };
+  return category ? categories[category] || category : "";
+};
+
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return "";
+  return new Date(dateString).toLocaleDateString("sr-Latn-RS", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
 export const BlogGrid = ({ selectedCategory }: { selectedCategory?: string }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredPosts = selectedCategory && selectedCategory !== "Sve" 
-    ? blogPosts.filter(post => post.category === selectedCategory)
-    : blogPosts;
+  useEffect(() => {
+    const fetchArticles = async () => {
+      setLoading(true);
+      
+      let query = supabase
+        .from("articles")
+        .select("id, title, slug, excerpt, cover_image, category, published_at")
+        .eq("status", "published")
+        .order("published_at", { ascending: false });
 
-  const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
+      if (selectedCategory && selectedCategory !== "Sve") {
+        const categoryMap: Record<string, string> = {
+          "Istorija": "istorija",
+          "Kultura": "kultura",
+          "Ljudi": "ljudi",
+          "Priroda": "priroda",
+          "Gastronomija": "gastronomija",
+          "Arhitektura": "arhitektura",
+        };
+        const categorySlug = categoryMap[selectedCategory] || selectedCategory.toLowerCase();
+        query = query.eq("category", categorySlug);
+      }
+
+      const { data, error } = await query;
+
+      if (!error && data) {
+        setArticles(data);
+      }
+      setLoading(false);
+    };
+
+    fetchArticles();
+  }, [selectedCategory]);
+
+  const totalPages = Math.ceil(articles.length / POSTS_PER_PAGE);
   const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
   const endIndex = startIndex + POSTS_PER_PAGE;
-  const currentPosts = filteredPosts.slice(startIndex, endIndex);
+  const currentPosts = articles.slice(startIndex, endIndex);
 
   // Reset to page 1 when category changes
   useEffect(() => {
@@ -40,6 +103,16 @@ export const BlogGrid = ({ selectedCategory }: { selectedCategory?: string }) =>
     setCurrentPage(page);
     document.getElementById('blog')?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  if (loading) {
+    return (
+      <section id="blog" className="py-20 px-4 bg-muted/30">
+        <div className="container mx-auto flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="blog" className="py-20 px-4 bg-muted/30">
@@ -53,7 +126,7 @@ export const BlogGrid = ({ selectedCategory }: { selectedCategory?: string }) =>
           </p>
         </div>
 
-        {filteredPosts.length === 0 ? (
+        {articles.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-xl text-muted-foreground">Nema postova u ovoj kategoriji.</p>
           </div>
@@ -61,52 +134,50 @@ export const BlogGrid = ({ selectedCategory }: { selectedCategory?: string }) =>
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {currentPosts.map((post, index) => (
-            <Card
-              key={post.id}
-              className="flex flex-col overflow-hidden card-hover bg-gradient-card border-border/50"
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              <AspectRatio ratio={16 / 9} className="overflow-hidden">
-                <img
-                  src={post.imageUrl}
-                  srcSet={post.imageSrcSet}
-                  sizes={getBlogCardSizes()}
-                  alt={post.title}
-                  loading="lazy"
-                  className="object-cover w-full h-full transition-transform duration-300 hover:scale-110"
-                />
-              </AspectRatio>
-              <CardHeader>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>{post.date}</span>
-                  <Badge variant="outline" className={`ml-auto border ${getCategoryColor(post.category)}`}>
-                    {post.category}
-                  </Badge>
-                </div>
-                <CardTitle className="text-2xl hover:text-primary transition-colors">
-                  {post.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base">
-                  {post.excerpt}
-                </CardDescription>
-              </CardContent>
-              <CardFooter className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <User className="w-4 h-4" />
-                  <span>{post.author}</span>
-                </div>
-                <Link to={`/blog/${post.id}`}>
-                  <Button variant="ghost" size="sm" className="bg-muted text-primary hover:bg-muted/80 hover:text-primary transition-all duration-300">
-                    Pročitaj više
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </CardFooter>
-            </Card>
-            ))}
+                <Card
+                  key={post.id}
+                  className="flex flex-col overflow-hidden card-hover bg-gradient-card border-border/50"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  {post.cover_image && (
+                    <AspectRatio ratio={16 / 9} className="overflow-hidden">
+                      <img
+                        src={post.cover_image}
+                        alt={post.title}
+                        loading="lazy"
+                        className="object-cover w-full h-full transition-transform duration-300 hover:scale-110"
+                      />
+                    </AspectRatio>
+                  )}
+                  <CardHeader>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <Calendar className="w-4 h-4" />
+                      <span>{formatDate(post.published_at)}</span>
+                      {post.category && (
+                        <Badge variant="outline" className={`ml-auto border ${getCategoryColor(post.category)}`}>
+                          {getCategoryLabel(post.category)}
+                        </Badge>
+                      )}
+                    </div>
+                    <CardTitle className="text-2xl hover:text-primary transition-colors">
+                      {post.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-base">
+                      {post.excerpt}
+                    </CardDescription>
+                  </CardContent>
+                  <CardFooter className="flex items-center justify-end">
+                    <Link to={`/blog/${post.slug}`}>
+                      <Button variant="ghost" size="sm" className="bg-muted text-primary hover:bg-muted/80 hover:text-primary transition-all duration-300">
+                        Pročitaj više
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </CardFooter>
+                </Card>
+              ))}
             </div>
 
             {/* Pagination */}
@@ -122,7 +193,6 @@ export const BlogGrid = ({ selectedCategory }: { selectedCategory?: string }) =>
                     </PaginationItem>
                     
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                      // Show first page, last page, current page, and pages around current
                       const showPage = 
                         page === 1 || 
                         page === totalPages || 
