@@ -409,8 +409,40 @@ const ArticleEditor = () => {
             <h1 className="text-lg font-semibold text-foreground">
               {isEditing ? "Uredi članak" : "Novi članak"}
             </h1>
+            {/* Role indicator badge */}
+            {roleCheck.checked && (
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                  roleCheck.hasPermission
+                    ? "bg-green-500/20 text-green-600 border border-green-500/30"
+                    : "bg-destructive/20 text-destructive border border-destructive/30"
+                }`}
+              >
+                {roleCheck.hasPermission ? (
+                  <ShieldCheck className="h-3 w-3" />
+                ) : (
+                  <ShieldX className="h-3 w-3" />
+                )}
+                {roleCheck.hasPermission ? roleCheck.role : "Bez dozvole"}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Role check button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={checkUserRole}
+              disabled={roleCheck.loading}
+              className="group"
+            >
+              <ShieldAlert
+                className={`h-4 w-4 mr-2 transition-transform duration-500 ${
+                  roleCheck.loading ? "animate-spin" : "group-hover:rotate-12"
+                }`}
+              />
+              {roleCheck.loading ? "Provera..." : "Proveri uloge"}
+            </Button>
             <Button
               variant="outline"
               onClick={() => handleSave(false)}
