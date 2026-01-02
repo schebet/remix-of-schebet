@@ -99,11 +99,33 @@ serve(async (req) => {
     if (resources && Array.isArray(resources) && resources.length > 0) {
       console.log(`Processing ${resources.length} resource(s)`);
       resourcesContext = "\n\n--- DODATNI RESURSI ZA KORIŠĆENJE ---\n";
-      (resources as AIResource[]).forEach((resource, index) => {
-        resourcesContext += `\n[Resurs ${index + 1}: ${resource.name}]\n`;
-        resourcesContext += resource.content;
+      for (const resource of resources as AIResource[]) {
+        resourcesContext += `\n[Resurs: ${resource.name}]\n`;
+        
+        // Handle URL resources - fetch content
+        if (resource.type === 'url' && resource.name.startsWith('http')) {
+          try {
+            console.log(`Fetching URL resource: ${resource.name}`);
+            const urlResponse = await fetch(resource.name, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AIBot/1.0)' }
+            });
+            if (urlResponse.ok) {
+              const text = await urlResponse.text();
+              // Extract text content, limit to 10000 chars
+              const cleanText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 10000);
+              resourcesContext += cleanText;
+            } else {
+              resourcesContext += `[Nije moguće učitati sadržaj sa URL-a]`;
+            }
+          } catch (e) {
+            console.error(`Failed to fetch URL: ${resource.name}`, e);
+            resourcesContext += `[Greška pri učitavanju URL-a]`;
+          }
+        } else {
+          resourcesContext += resource.content;
+        }
         resourcesContext += "\n---\n";
-      });
+      }
     }
 
     let systemPrompt = "";

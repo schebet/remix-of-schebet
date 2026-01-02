@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useCategories } from "@/hooks/useCategories";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,8 @@ interface GalleryImage {
   created_at: string;
 }
 
-const CATEGORIES = [
+// Fallback categories if database is empty
+const FALLBACK_CATEGORIES = [
   "Istorija",
   "Kultura", 
   "Ljudi",
@@ -73,6 +75,12 @@ const GalleryManager = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  
+  // Load categories from database
+  const { categories: dbCategories } = useCategories();
+  const categoryLabels = dbCategories.length > 0 
+    ? dbCategories.map(c => c.label) 
+    : FALLBACK_CATEGORIES;
 
   useEffect(() => {
     fetchImages();
@@ -278,7 +286,7 @@ const GalleryManager = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((cat) => (
+                      {categoryLabels.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
                         </SelectItem>

@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ArticleEditor from "./pages/admin/ArticleEditor";
 import GalleryManager from "./pages/admin/GalleryManager";
+import CategoryManager from "./pages/admin/CategoryManager";
 import ProtectedRoute from "./components/admin/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <GalleryManager />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/categories"
+            element={
+              <ProtectedRoute>
+                <CategoryManager />
               </ProtectedRoute>
             }
           />

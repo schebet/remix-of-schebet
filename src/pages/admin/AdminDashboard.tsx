@@ -38,6 +38,7 @@ import {
   UserX,
   UserPlus,
   Image,
+  Tag,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -445,12 +446,20 @@ const AdminDashboard = () => {
           </h2>
           <div className="flex gap-2">
             {isAdmin && (
-              <Button variant="outline" asChild>
-                <Link to="/admin/gallery">
-                  <Image className="h-4 w-4 mr-2" />
-                  Galerija
-                </Link>
-              </Button>
+              <>
+                <Button variant="outline" asChild>
+                  <Link to="/admin/gallery">
+                    <Image className="h-4 w-4 mr-2" />
+                    Galerija
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/admin/categories">
+                    <Tag className="h-4 w-4 mr-2" />
+                    Kategorije
+                  </Link>
+                </Button>
+              </>
             )}
             <Button asChild className="bg-primary hover:bg-primary/90">
               <Link to="/admin/new">
