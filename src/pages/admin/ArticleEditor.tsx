@@ -40,10 +40,13 @@ import {
   FileText,
   Trash2,
   ImagePlus,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useCategories } from "@/hooks/useCategories";
 
-const CATEGORIES = [
+// Fallback categories if database is empty
+const FALLBACK_CATEGORIES = [
   { value: "istorija", label: "Istorija" },
   { value: "kultura", label: "Kultura" },
   { value: "ljudi", label: "Ljudi" },
@@ -105,6 +108,8 @@ const ArticleEditor = () => {
   }>({ checked: false, loading: false, hasPermission: false, role: null });
   const [aiResources, setAiResources] = useState<AIResource[]>([]);
   const [resourceUploading, setResourceUploading] = useState(false);
+  const [urlResourceInput, setUrlResourceInput] = useState("");
+  const [urlResourceLoading, setUrlResourceLoading] = useState(false);
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [coverImageDialogOpen, setCoverImageDialogOpen] = useState(false);
   const [galleryImages, setGalleryImages] = useState<{ id: string; title: string; image_url: string }[]>([]);
@@ -114,6 +119,10 @@ const ArticleEditor = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Load categories from database
+  const { categories: dbCategories, loading: categoriesLoading } = useCategories();
+  const categories = dbCategories.length > 0 ? dbCategories : FALLBACK_CATEGORIES;
 
   useEffect(() => {
     if (isEditing) {
@@ -391,6 +400,57 @@ const ArticleEditor = () => {
 
   const handleRemoveResource = (index: number) => {
     setAiResources((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddUrlResource = async () => {
+    const url = urlResourceInput.trim();
+    if (!url) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Unesite URL adresu.",
+      });
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(url);
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Neispravan URL",
+        description: "Unesite validnu URL adresu (npr. https://example.com).",
+      });
+      return;
+    }
+
+    setUrlResourceLoading(true);
+
+    try {
+      // Add URL as a resource - the edge function will fetch the content
+      const urlResource: AIResource = {
+        name: url,
+        content: `[URL Resource] ${url}`,
+        type: 'url',
+      };
+      
+      setAiResources((prev) => [...prev, urlResource]);
+      setUrlResourceInput("");
+      
+      toast({
+        title: "URL dodat",
+        description: "URL resurs je dodat za AI asistenta.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Nije moguće dodati URL resurs.",
+      });
+    } finally {
+      setUrlResourceLoading(false);
+    }
   };
 
   const fetchGalleryImages = async () => {
@@ -816,7 +876,7 @@ const ArticleEditor = () => {
                       <SelectValue placeholder="Izaberite kategoriju" />
                     </SelectTrigger>
                     <SelectContent>
-                      {CATEGORIES.map((cat) => (
+                      {categories.map((cat) => (
                         <SelectItem key={cat.value} value={cat.value}>
                           {cat.label}
                         </SelectItem>
@@ -975,13 +1035,13 @@ const ArticleEditor = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* AI Resources Upload */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label className="text-sm font-medium flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Resursi za AI (opciono)
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Uploadujte fajlove sa podacima koje će AI koristiti (txt, md, html, csv, json, xml, pdf).
+                  Dodajte fajlove ili URL adrese kao izvore informacija za AI.
                 </p>
                 
                 <input
@@ -993,6 +1053,7 @@ const ArticleEditor = () => {
                   className="hidden"
                 />
                 
+                {/* File and URL resource buttons */}
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
@@ -1007,7 +1068,36 @@ const ArticleEditor = () => {
                     ) : (
                       <Upload className="h-4 w-4 mr-2" />
                     )}
-                    Dodaj resurse
+                    Dodaj fajlove
+                  </Button>
+                </div>
+
+                {/* URL Resource Input */}
+                <div className="flex gap-2">
+                  <Input
+                    value={urlResourceInput}
+                    onChange={(e) => setUrlResourceInput(e.target.value)}
+                    placeholder="https://example.com/article"
+                    className="flex-1 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddUrlResource();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddUrlResource}
+                    disabled={urlResourceLoading || !urlResourceInput.trim()}
+                  >
+                    {urlResourceLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <LinkIcon className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
                 
@@ -1016,9 +1106,17 @@ const ArticleEditor = () => {
                     {aiResources.map((resource, index) => (
                       <div
                         key={index}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                          resource.type === 'url' 
+                            ? 'bg-accent/10 text-accent-foreground border-accent/20' 
+                            : 'bg-primary/10 text-primary border-primary/20'
+                        }`}
                       >
-                        <FileText className="h-3 w-3" />
+                        {resource.type === 'url' ? (
+                          <LinkIcon className="h-3 w-3" />
+                        ) : (
+                          <FileText className="h-3 w-3" />
+                        )}
                         <span className="max-w-[150px] truncate">{resource.name}</span>
                         <button
                           type="button"
