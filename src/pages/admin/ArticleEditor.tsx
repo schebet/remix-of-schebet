@@ -41,6 +41,7 @@ import {
   Trash2,
   ImagePlus,
   Link as LinkIcon,
+  Video,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useCategories } from "@/hooks/useCategories";
@@ -115,9 +116,13 @@ const ArticleEditor = () => {
   const [galleryImages, setGalleryImages] = useState<{ id: string; title: string; image_url: string }[]>([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [inlineUploading, setInlineUploading] = useState(false);
+  const [videoDialogOpen, setVideoDialogOpen] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoUploading, setVideoUploading] = useState(false);
   const resourceInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Load categories from database
@@ -565,6 +570,90 @@ const ArticleEditor = () => {
       setInlineUploading(false);
       if (inlineImageInputRef.current) {
         inlineImageInputRef.current.value = "";
+      }
+    }
+  };
+
+  const insertVideoAtCursor = (videoSrc: string, title?: string) => {
+    // Use HTML video tag for direct embedding
+    const videoHtml = `\n<video controls src="${videoSrc}" title="${title || 'Video'}"></video>\n`;
+    const textarea = contentTextareaRef.current;
+    
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newContent = form.content.substring(0, start) + videoHtml + form.content.substring(end);
+      setForm((prev) => ({ ...prev, content: newContent }));
+      
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + videoHtml.length, start + videoHtml.length);
+      }, 0);
+    } else {
+      setForm((prev) => ({ ...prev, content: prev.content + videoHtml }));
+    }
+    
+    setVideoDialogOpen(false);
+    setVideoUrl("");
+    toast({
+      title: "Video ubačen",
+      description: "Video je dodat u tekst članka.",
+    });
+  };
+
+  const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Podržani formati: MP4, WebM, OGG, MOV",
+      });
+      return;
+    }
+
+    // Validate file size (max 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Maksimalna veličina videa je 100MB.",
+      });
+      return;
+    }
+
+    setVideoUploading(true);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `videos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("article-images")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("article-images")
+        .getPublicUrl(filePath);
+
+      insertVideoAtCursor(urlData.publicUrl, file.name.replace(/\.[^/.]+$/, ""));
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Greška pri uploadu",
+        description: error.message || "Pokušajte ponovo.",
+      });
+    } finally {
+      setVideoUploading(false);
+      if (videoInputRef.current) {
+        videoInputRef.current.value = "";
       }
     }
   };
@@ -1165,20 +1254,101 @@ const ArticleEditor = () => {
 
           {/* Content */}
           <Card className="border-border/50">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-lg">Sadržaj *</CardTitle>
-              <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleOpenImageDialog}
-                    className="gap-2"
-                  >
-                    <ImagePlus className="h-4 w-4" />
-                    Ubaci sliku
-                  </Button>
-                </DialogTrigger>
+              <div className="flex gap-2">
+                {/* Video Dialog */}
+                <Dialog open={videoDialogOpen} onOpenChange={setVideoDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <Video className="h-4 w-4" />
+                      Ubaci video
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Ubaci video u tekst</DialogTitle>
+                    </DialogHeader>
+                    <Tabs defaultValue="upload" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="upload">Upload MP4</TabsTrigger>
+                        <TabsTrigger value="url">URL / YouTube</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="upload" className="mt-4">
+                        <input
+                          ref={videoInputRef}
+                          type="file"
+                          accept="video/mp4,video/webm,video/ogg,video/quicktime"
+                          onChange={handleVideoUpload}
+                          className="hidden"
+                        />
+                        <div
+                          onClick={() => !videoUploading && videoInputRef.current?.click()}
+                          className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                        >
+                          {videoUploading ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">Uploadovanje...</p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <Video className="h-8 w-8 text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">
+                                Kliknite da uploadujete video
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                MP4, WebM, OGG do 100MB
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="url" className="mt-4 space-y-4">
+                        <div className="space-y-2">
+                          <Label>Video URL</Label>
+                          <Input
+                            value={videoUrl}
+                            onChange={(e) => setVideoUrl(e.target.value)}
+                            placeholder="https://example.com/video.mp4 ili YouTube link"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Podržani: MP4 linkovi, YouTube, Vimeo
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            if (videoUrl.trim()) {
+                              insertVideoAtCursor(videoUrl.trim());
+                            }
+                          }}
+                          disabled={!videoUrl.trim()}
+                          className="w-full"
+                        >
+                          Ubaci video
+                        </Button>
+                      </TabsContent>
+                    </Tabs>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Image Dialog */}
+                <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleOpenImageDialog}
+                      className="gap-2"
+                    >
+                      <ImagePlus className="h-4 w-4" />
+                      Ubaci sliku
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
                     <DialogTitle>Ubaci sliku u tekst</DialogTitle>
@@ -1257,6 +1427,7 @@ const ArticleEditor = () => {
                   </Tabs>
                 </DialogContent>
               </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               <Textarea
@@ -1269,7 +1440,7 @@ const ArticleEditor = () => {
                 className="bg-background resize-none min-h-[400px] font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                Podržava Markdown formatiranje. Slike: ![opis](url)
+                Podržava Markdown formatiranje. Slike: ![opis](url), Video: &lt;video src="url"&gt;&lt;/video&gt;
               </p>
             </CardContent>
           </Card>
