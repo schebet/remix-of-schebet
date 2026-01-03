@@ -118,6 +118,7 @@ const ArticleEditor = () => {
   const [inlineUploading, setInlineUploading] = useState(false);
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
+  const [videoPoster, setVideoPoster] = useState("");
   const [videoUploading, setVideoUploading] = useState(false);
   const resourceInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -574,9 +575,10 @@ const ArticleEditor = () => {
     }
   };
 
-  const insertVideoAtCursor = (videoSrc: string, title?: string) => {
-    // Use HTML video tag for direct embedding
-    const videoHtml = `\n<video controls src="${videoSrc}" title="${title || 'Video'}"></video>\n`;
+  const insertVideoAtCursor = (videoSrc: string, title?: string, posterUrl?: string) => {
+    // Use HTML video tag for direct embedding with optional poster
+    const posterAttr = posterUrl ? ` poster="${posterUrl}"` : '';
+    const videoHtml = `\n<video controls src="${videoSrc}" title="${title || 'Video'}"${posterAttr}></video>\n`;
     const textarea = contentTextareaRef.current;
     
     if (textarea) {
@@ -595,6 +597,7 @@ const ArticleEditor = () => {
     
     setVideoDialogOpen(false);
     setVideoUrl("");
+    setVideoPoster("");
     toast({
       title: "Video ubačen",
       description: "Video je dodat u tekst članka.",
@@ -1320,10 +1323,21 @@ const ArticleEditor = () => {
                             Podržani: MP4 linkovi, YouTube, Vimeo
                           </p>
                         </div>
+                        <div className="space-y-2">
+                          <Label>Poster slika (opciono)</Label>
+                          <Input
+                            value={videoPoster}
+                            onChange={(e) => setVideoPoster(e.target.value)}
+                            placeholder="https://example.com/thumbnail.jpg"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            URL slike koja se prikazuje pre reprodukcije. Za YouTube se automatski generiše.
+                          </p>
+                        </div>
                         <Button
                           onClick={() => {
                             if (videoUrl.trim()) {
-                              insertVideoAtCursor(videoUrl.trim());
+                              insertVideoAtCursor(videoUrl.trim(), undefined, videoPoster.trim() || undefined);
                             }
                           }}
                           disabled={!videoUrl.trim()}
