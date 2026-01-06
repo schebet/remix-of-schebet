@@ -11,6 +11,7 @@ import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import MarkdownVideo from "@/components/MarkdownVideo";
+import MarkdownAudio from "@/components/MarkdownAudio";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -243,13 +244,25 @@ const BlogPost = () => {
                     poster={props.poster}
                   />
                 ),
-                // Handle links that point to video files
+                audio: ({ node, ...props }) => (
+                  <MarkdownAudio 
+                    src={props.src || ""} 
+                    title={props.title}
+                  />
+                ),
+                // Handle links that point to media files
                 a: ({ node, href, children, ...props }) => {
                   const videoExtensions = ['.mp4', '.webm', '.ogg', '.ogv', '.mov'];
+                  const audioExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.flac'];
                   const isVideoLink = href && videoExtensions.some(ext => href.toLowerCase().includes(ext));
+                  const isAudioLink = href && audioExtensions.some(ext => href.toLowerCase().includes(ext));
                   
                   if (isVideoLink) {
                     return <MarkdownVideo src={href} title={typeof children === 'string' ? children : undefined} />;
+                  }
+                  
+                  if (isAudioLink) {
+                    return <MarkdownAudio src={href} title={typeof children === 'string' ? children : undefined} />;
                   }
                   
                   return <a href={href} {...props}>{children}</a>;

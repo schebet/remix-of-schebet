@@ -42,6 +42,7 @@ import {
   ImagePlus,
   Link as LinkIcon,
   Video,
+  Music,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useCategories } from "@/hooks/useCategories";
@@ -120,10 +121,14 @@ const ArticleEditor = () => {
   const [videoUrl, setVideoUrl] = useState("");
   const [videoPoster, setVideoPoster] = useState("");
   const [videoUploading, setVideoUploading] = useState(false);
+  const [audioDialogOpen, setAudioDialogOpen] = useState(false);
+  const [audioUrl, setAudioUrl] = useState("");
+  const [audioUploading, setAudioUploading] = useState(false);
   const resourceInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Load categories from database
@@ -657,6 +662,89 @@ const ArticleEditor = () => {
       setVideoUploading(false);
       if (videoInputRef.current) {
         videoInputRef.current.value = "";
+      }
+    }
+  };
+
+  const insertAudioAtCursor = (audioSrc: string, title?: string) => {
+    const audioHtml = `\n<audio controls src="${audioSrc}" title="${title || 'Audio'}"></audio>\n`;
+    const textarea = contentTextareaRef.current;
+    
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newContent = form.content.substring(0, start) + audioHtml + form.content.substring(end);
+      setForm((prev) => ({ ...prev, content: newContent }));
+      
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + audioHtml.length, start + audioHtml.length);
+      }, 0);
+    } else {
+      setForm((prev) => ({ ...prev, content: prev.content + audioHtml }));
+    }
+    
+    setAudioDialogOpen(false);
+    setAudioUrl("");
+    toast({
+      title: "Audio ubačen",
+      description: "Audio fajl je dodat u tekst članka.",
+    });
+  };
+
+  const handleAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac', 'audio/flac', 'audio/x-m4a'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Podržani formati: MP3, WAV, OGG, M4A, AAC, FLAC",
+      });
+      return;
+    }
+
+    // Validate file size (max 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Maksimalna veličina audio fajla je 50MB.",
+      });
+      return;
+    }
+
+    setAudioUploading(true);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `audio/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("article-images")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("article-images")
+        .getPublicUrl(filePath);
+
+      insertAudioAtCursor(urlData.publicUrl, file.name.replace(/\.[^/.]+$/, ""));
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Greška pri uploadu",
+        description: error.message || "Pokušajte ponovo.",
+      });
+    } finally {
+      setAudioUploading(false);
+      if (audioInputRef.current) {
+        audioInputRef.current.value = "";
       }
     }
   };
@@ -1344,6 +1432,85 @@ const ArticleEditor = () => {
                           className="w-full"
                         >
                           Ubaci video
+                        </Button>
+                      </TabsContent>
+                    </Tabs>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Audio Dialog */}
+                <Dialog open={audioDialogOpen} onOpenChange={setAudioDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <Music className="h-4 w-4" />
+                      Ubaci audio
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Ubaci audio u tekst</DialogTitle>
+                    </DialogHeader>
+                    <Tabs defaultValue="upload" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="upload">Upload audio</TabsTrigger>
+                        <TabsTrigger value="url">URL</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="upload" className="mt-4">
+                        <input
+                          ref={audioInputRef}
+                          type="file"
+                          accept="audio/mpeg,audio/wav,audio/ogg,audio/mp4,audio/aac,audio/flac,audio/x-m4a"
+                          onChange={handleAudioUpload}
+                          className="hidden"
+                        />
+                        <div
+                          onClick={() => !audioUploading && audioInputRef.current?.click()}
+                          className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                        >
+                          {audioUploading ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">Uploadovanje...</p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <Music className="h-8 w-8 text-muted-foreground" />
+                              <p className="text-sm text-muted-foreground">
+                                Kliknite da uploadujete audio
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                MP3, WAV, OGG, M4A do 50MB
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </TabsContent>
+                      <TabsContent value="url" className="mt-4 space-y-4">
+                        <div className="space-y-2">
+                          <Label>Audio URL</Label>
+                          <Input
+                            value={audioUrl}
+                            onChange={(e) => setAudioUrl(e.target.value)}
+                            placeholder="https://example.com/audio.mp3"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Podržani formati: MP3, WAV, OGG, M4A, AAC, FLAC
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            if (audioUrl.trim()) {
+                              insertAudioAtCursor(audioUrl.trim());
+                            }
+                          }}
+                          disabled={!audioUrl.trim()}
+                          className="w-full"
+                        >
+                          Ubaci audio
                         </Button>
                       </TabsContent>
                     </Tabs>
