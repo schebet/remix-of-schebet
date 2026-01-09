@@ -74,6 +74,7 @@ interface ArticleForm {
   cover_image: string;
   category: string;
   status: string;
+  og_image: string;
 }
 
 interface AIResource {
@@ -97,11 +98,13 @@ const ArticleEditor = () => {
     cover_image: "",
     category: "",
     status: "draft",
+    og_image: "",
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [aiLoading, setAiLoading] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [ogGenerating, setOgGenerating] = useState(false);
   const [roleCheck, setRoleCheck] = useState<{
     checked: boolean;
     loading: boolean;
@@ -167,6 +170,7 @@ const ArticleEditor = () => {
         cover_image: data.cover_image || "",
         category: data.category || "",
         status: data.status,
+        og_image: data.og_image || "",
       });
     }
     setLoading(false);
@@ -840,15 +844,13 @@ const ArticleEditor = () => {
     }
   };
 
-  const generateOgImage = async (slug: string) => {
+  const generateOgImage = async (slug: string, updateState = false) => {
+    if (ogGenerating) return;
+    
+    setOgGenerating(true);
     try {
       console.log(`Generating OG image for: ${slug}`);
-      const { data, error } = await supabase.functions.invoke("generate-og-image", {
-        body: {},
-        headers: {},
-      });
       
-      // Use query params approach via fetch
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-og-image?slug=${encodeURIComponent(slug)}`,
         {
@@ -862,20 +864,45 @@ const ArticleEditor = () => {
       if (!response.ok) {
         const errorData = await response.json();
         console.error("OG image generation failed:", errorData);
-        return;
+        throw new Error(errorData.error || "Generisanje nije uspelo");
       }
       
       const result = await response.json();
       console.log("OG image generated:", result.url);
       
+      if (updateState && result.url) {
+        setForm((prev) => ({ ...prev, og_image: result.url }));
+      }
+      
       toast({
         title: "OG slika generisana!",
         description: "Slika za deljenje na društvenim mrežama je kreirana.",
       });
-    } catch (error) {
+      
+      return result.url;
+    } catch (error: any) {
       console.error("Error generating OG image:", error);
-      // Don't show error toast - OG generation is optional
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: error.message || "Nije moguće generisati OG sliku.",
+      });
+    } finally {
+      setOgGenerating(false);
     }
+  };
+
+  const handleRegenerateOgImage = async () => {
+    if (!form.slug || !isEditing || form.status !== "published") {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Članak mora biti objavljen da bi se generisala OG slika.",
+      });
+      return;
+    }
+    
+    await generateOgImage(form.slug, true);
   };
 
   const handleSave = async (publish = false) => {
@@ -892,8 +919,10 @@ const ArticleEditor = () => {
     const status = publish ? "published" : form.status;
     const published_at = publish ? new Date().toISOString() : null;
 
+    // Exclude og_image from articleData - it's managed by the edge function
+    const { og_image, ...formWithoutOg } = form;
     const articleData = {
-      ...form,
+      ...formWithoutOg,
       status,
       published_at: status === "published" ? published_at || new Date().toISOString() : null,
       author_id: user?.id,
@@ -1246,6 +1275,81 @@ const ArticleEditor = () => {
                     className="bg-background text-sm flex-1"
                   />
                 </div>
+              </div>
+              
+              {/* OG Image Preview */}
+              <div className="space-y-2 pt-4 border-t border-border/50">
+                <Label className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  OG slika (za društvene mreže)
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Ova slika se prikazuje kada delite članak na Facebook-u, Twitter-u, LinkedIn-u...
+                </p>
+                
+                {form.og_image ? (
+                  <div className="space-y-3">
+                    <div className="relative rounded-lg overflow-hidden border border-border bg-muted/30">
+                      <div className="aspect-[1200/630] relative">
+                        <img
+                          src={form.og_image}
+                          alt="OG preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="absolute top-2 right-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={handleRegenerateOgImage}
+                          disabled={ogGenerating || form.status !== "published"}
+                        >
+                          {ogGenerating ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-4 w-4 mr-2" />
+                          )}
+                          Regeneriši
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Dimenzije: 1200×630px (optimalno za društvene mreže)
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <ImageIcon className="h-10 w-10 text-muted-foreground/50" />
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          {form.status === "published" 
+                            ? "OG slika nije generisana"
+                            : "OG slika će biti automatski generisana kada objavite članak"
+                          }
+                        </p>
+                        {form.status === "published" && isEditing && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRegenerateOgImage}
+                            disabled={ogGenerating}
+                            className="mt-2"
+                          >
+                            {ogGenerating ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-4 w-4 mr-2" />
+                            )}
+                            Generiši OG sliku
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
