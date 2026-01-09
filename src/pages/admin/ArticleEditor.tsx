@@ -840,6 +840,44 @@ const ArticleEditor = () => {
     }
   };
 
+  const generateOgImage = async (slug: string) => {
+    try {
+      console.log(`Generating OG image for: ${slug}`);
+      const { data, error } = await supabase.functions.invoke("generate-og-image", {
+        body: {},
+        headers: {},
+      });
+      
+      // Use query params approach via fetch
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-og-image?slug=${encodeURIComponent(slug)}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("OG image generation failed:", errorData);
+        return;
+      }
+      
+      const result = await response.json();
+      console.log("OG image generated:", result.url);
+      
+      toast({
+        title: "OG slika generisana!",
+        description: "Slika za deljenje na društvenim mrežama je kreirana.",
+      });
+    } catch (error) {
+      console.error("Error generating OG image:", error);
+      // Don't show error toast - OG generation is optional
+    }
+  };
+
   const handleSave = async (publish = false) => {
     if (!form.title.trim() || !form.content.trim()) {
       toast({
@@ -891,6 +929,13 @@ const ArticleEditor = () => {
           ? "Vaš članak je sada vidljiv na sajtu."
           : "Promene su sačuvane.",
       });
+      
+      // Generate OG image automatically when publishing
+      if (publish && status === "published") {
+        // Don't await - let it run in background
+        generateOgImage(form.slug);
+      }
+      
       navigate("/admin");
     }
     setSaving(false);
