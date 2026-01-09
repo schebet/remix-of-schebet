@@ -30,6 +30,7 @@ interface Article {
   category: string | null;
   published_at: string | null;
   author_id: string | null;
+  og_image: string | null;
 }
 
 const BlogPost = () => {
@@ -137,8 +138,9 @@ const BlogPost = () => {
   const siteUrl = 'https://sebet.lovable.app';
   const fullUrl = `${siteUrl}/blog/${article.slug}`;
   
-  // Fixed OG image for all posts - valid Supabase storage URL
-  const ogImageUrl = 'https://geflwjxcposyetxrmbcq.supabase.co/storage/v1/object/public/article-images/covers/1766478998950-uft5dfsb4l.jpg';
+  // Use dynamic OG image if available, otherwise fallback to cover image or default
+  const defaultOgImage = 'https://geflwjxcposyetxrmbcq.supabase.co/storage/v1/object/public/article-images/covers/1766478998950-uft5dfsb4l.jpg';
+  const ogImageUrl = article.og_image || article.cover_image || defaultOgImage;
 
   return (
     <div className="min-h-screen flex flex-col">
