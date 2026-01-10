@@ -127,11 +127,15 @@ const ArticleEditor = () => {
   const [audioDialogOpen, setAudioDialogOpen] = useState(false);
   const [audioUrl, setAudioUrl] = useState("");
   const [audioUploading, setAudioUploading] = useState(false);
+  const [customOgUploading, setCustomOgUploading] = useState(false);
+  const [ogGalleryDialogOpen, setOgGalleryDialogOpen] = useState(false);
+  const [ogUrlInput, setOgUrlInput] = useState("");
   const resourceInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inlineImageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const customOgInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Load categories from database
@@ -905,6 +909,180 @@ const ArticleEditor = () => {
     await generateOgImage(form.slug, true);
   };
 
+  const handleCustomOgUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Možete uploadovati samo slike.",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Maksimalna veličina slike je 5MB.",
+      });
+      return;
+    }
+
+    setCustomOgUploading(true);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `og-custom/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("article-images")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("article-images")
+        .getPublicUrl(filePath);
+
+      const newOgUrl = urlData.publicUrl;
+      setForm((prev) => ({ ...prev, og_image: newOgUrl }));
+
+      // Update database if editing existing article
+      if (isEditing && id) {
+        const { error: updateError } = await supabase
+          .from("articles")
+          .update({ og_image: newOgUrl })
+          .eq("id", id);
+
+        if (updateError) {
+          console.error("Error updating og_image in database:", updateError);
+        }
+      }
+
+      toast({
+        title: "OG slika uploadovana!",
+        description: "Custom OG slika je uspešno postavljena.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Greška pri uploadu",
+        description: error.message || "Pokušajte ponovo.",
+      });
+    } finally {
+      setCustomOgUploading(false);
+      if (customOgInputRef.current) {
+        customOgInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveCustomOgImage = async () => {
+    setForm((prev) => ({ ...prev, og_image: "" }));
+
+    // Update database if editing existing article
+    if (isEditing && id) {
+      const { error: updateError } = await supabase
+        .from("articles")
+        .update({ og_image: null })
+        .eq("id", id);
+
+      if (updateError) {
+        console.error("Error removing og_image from database:", updateError);
+        toast({
+          variant: "destructive",
+          title: "Greška",
+          description: "Nije moguće ukloniti OG sliku iz baze.",
+        });
+        return;
+      }
+    }
+
+    toast({
+      title: "OG slika uklonjena",
+      description: "Možete uploadovati novu ili generisati AI sliku.",
+    });
+  };
+
+  const handleOgUrlSubmit = async () => {
+    const url = ogUrlInput.trim();
+    if (!url) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Unesite URL slike.",
+      });
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(url);
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Neispravan URL",
+        description: "Unesite validnu URL adresu slike.",
+      });
+      return;
+    }
+
+    setForm((prev) => ({ ...prev, og_image: url }));
+
+    // Update database if editing existing article
+    if (isEditing && id) {
+      const { error: updateError } = await supabase
+        .from("articles")
+        .update({ og_image: url })
+        .eq("id", id);
+
+      if (updateError) {
+        console.error("Error updating og_image in database:", updateError);
+      }
+    }
+
+    setOgUrlInput("");
+    toast({
+      title: "OG slika postavljena",
+      description: "OG slika je uspešno ažurirana.",
+    });
+  };
+
+  const selectOgFromGallery = async (imageUrl: string) => {
+    setForm((prev) => ({ ...prev, og_image: imageUrl }));
+    setOgGalleryDialogOpen(false);
+
+    // Update database if editing existing article
+    if (isEditing && id) {
+      const { error: updateError } = await supabase
+        .from("articles")
+        .update({ og_image: imageUrl })
+        .eq("id", id);
+
+      if (updateError) {
+        console.error("Error updating og_image in database:", updateError);
+      }
+    }
+
+    toast({
+      title: "OG slika izabrana",
+      description: "OG slika je postavljena iz galerije.",
+    });
+  };
+
+  const handleOpenOgGalleryDialog = () => {
+    setOgGalleryDialogOpen(true);
+    if (galleryImages.length === 0) {
+      fetchGalleryImages();
+    }
+  };
+
   const handleSave = async (publish = false) => {
     if (!form.title.trim() || !form.content.trim()) {
       toast({
@@ -1278,14 +1456,23 @@ const ArticleEditor = () => {
               </div>
               
               {/* OG Image Preview */}
-              <div className="space-y-2 pt-4 border-t border-border/50">
+              <div className="space-y-3 pt-4 border-t border-border/50">
                 <Label className="flex items-center gap-2">
                   <ImageIcon className="h-4 w-4" />
                   OG slika (za društvene mreže)
                 </Label>
-                <p className="text-xs text-muted-foreground mb-2">
-                  Ova slika se prikazuje kada delite članak na Facebook-u, Twitter-u, LinkedIn-u...
+                <p className="text-xs text-muted-foreground">
+                  Ova slika se prikazuje kada delite članak na Facebook-u, Twitter-u, LinkedIn-u... Preporučene dimenzije: 1200×630px
                 </p>
+
+                {/* Hidden file input for custom OG upload */}
+                <input
+                  ref={customOgInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCustomOgUpload}
+                  className="hidden"
+                />
                 
                 {form.og_image ? (
                   <div className="space-y-3">
@@ -1297,57 +1484,239 @@ const ArticleEditor = () => {
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <div className="absolute top-2 right-2">
+                      <div className="absolute top-2 right-2 flex gap-2">
                         <Button
                           type="button"
                           size="sm"
                           variant="secondary"
+                          onClick={() => customOgInputRef.current?.click()}
+                          disabled={customOgUploading}
+                        >
+                          {customOgUploading ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4 mr-2" />
+                          )}
+                          Zameni
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={handleRemoveCustomOgImage}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Action buttons below image */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Dialog open={ogGalleryDialogOpen} onOpenChange={setOgGalleryDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleOpenOgGalleryDialog}
+                          >
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            Iz galerije
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl max-h-[80vh]">
+                          <DialogHeader>
+                            <DialogTitle>Izaberite OG sliku iz galerije</DialogTitle>
+                          </DialogHeader>
+                          <ScrollArea className="h-[60vh] pr-4">
+                            {galleryLoading ? (
+                              <div className="flex items-center justify-center py-8">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                              </div>
+                            ) : galleryImages.length === 0 ? (
+                              <p className="text-center text-muted-foreground py-8">
+                                Nema slika u galeriji.
+                              </p>
+                            ) : (
+                              <div className="grid grid-cols-3 gap-3">
+                                {galleryImages.map((img) => (
+                                  <div
+                                    key={img.id}
+                                    onClick={() => selectOgFromGallery(img.image_url)}
+                                    className="relative aspect-video rounded-lg overflow-hidden cursor-pointer border-2 border-transparent hover:border-primary transition-colors group"
+                                  >
+                                    <img
+                                      src={img.image_url}
+                                      alt={img.title}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="text-white text-sm font-medium">{img.title}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
+
+                      {form.status === "published" && isEditing && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={handleRegenerateOgImage}
-                          disabled={ogGenerating || form.status !== "published"}
+                          disabled={ogGenerating}
                         >
                           {ogGenerating ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           ) : (
                             <Sparkles className="h-4 w-4 mr-2" />
                           )}
-                          Regeneriši
+                          AI Regeneriši
                         </Button>
-                      </div>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Dimenzije: 1200×630px (optimalno za društvene mreže)
-                    </p>
+
+                    {/* URL input */}
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={ogUrlInput}
+                        onChange={(e) => setOgUrlInput(e.target.value)}
+                        placeholder="Ili unesite URL slike..."
+                        className="bg-background text-sm flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOgUrlSubmit}
+                        disabled={!ogUrlInput.trim()}
+                      >
+                        <LinkIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <ImageIcon className="h-10 w-10 text-muted-foreground/50" />
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">
-                          {form.status === "published" 
-                            ? "OG slika nije generisana"
-                            : "OG slika će biti automatski generisana kada objavite članak"
-                          }
-                        </p>
-                        {form.status === "published" && isEditing && (
+                  <div className="space-y-3">
+                    <div
+                      onClick={() => !customOgUploading && customOgInputRef.current?.click()}
+                      className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    >
+                      {customOgUploading ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Uploadovanje...</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-3">
+                          <ImageIcon className="h-10 w-10 text-muted-foreground/50" />
+                          <div className="space-y-1">
+                            <p className="text-sm text-muted-foreground">
+                              Kliknite da uploadujete custom OG sliku
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              PNG, JPG, WebP do 5MB (1200×630px preporučeno)
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Dialog open={ogGalleryDialogOpen} onOpenChange={setOgGalleryDialogOpen}>
+                        <DialogTrigger asChild>
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={handleRegenerateOgImage}
-                            disabled={ogGenerating}
-                            className="mt-2"
+                            onClick={handleOpenOgGalleryDialog}
                           >
-                            {ogGenerating ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Sparkles className="h-4 w-4 mr-2" />
-                            )}
-                            Generiši OG sliku
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            Iz galerije
                           </Button>
-                        )}
-                      </div>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl max-h-[80vh]">
+                          <DialogHeader>
+                            <DialogTitle>Izaberite OG sliku iz galerije</DialogTitle>
+                          </DialogHeader>
+                          <ScrollArea className="h-[60vh] pr-4">
+                            {galleryLoading ? (
+                              <div className="flex items-center justify-center py-8">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                              </div>
+                            ) : galleryImages.length === 0 ? (
+                              <p className="text-center text-muted-foreground py-8">
+                                Nema slika u galeriji.
+                              </p>
+                            ) : (
+                              <div className="grid grid-cols-3 gap-3">
+                                {galleryImages.map((img) => (
+                                  <div
+                                    key={img.id}
+                                    onClick={() => selectOgFromGallery(img.image_url)}
+                                    className="relative aspect-video rounded-lg overflow-hidden cursor-pointer border-2 border-transparent hover:border-primary transition-colors group"
+                                  >
+                                    <img
+                                      src={img.image_url}
+                                      alt={img.title}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="text-white text-sm font-medium">{img.title}</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </ScrollArea>
+                        </DialogContent>
+                      </Dialog>
+
+                      {form.status === "published" && isEditing && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleRegenerateOgImage}
+                          disabled={ogGenerating}
+                        >
+                          {ogGenerating ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-4 w-4 mr-2" />
+                          )}
+                          AI Generiši
+                        </Button>
+                      )}
                     </div>
+
+                    {/* URL input */}
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={ogUrlInput}
+                        onChange={(e) => setOgUrlInput(e.target.value)}
+                        placeholder="Ili unesite URL slike..."
+                        className="bg-background text-sm flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOgUrlSubmit}
+                        disabled={!ogUrlInput.trim()}
+                      >
+                        <LinkIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {form.status !== "published" && (
+                      <p className="text-xs text-muted-foreground italic">
+                        Napomena: Ako ne postavite custom sliku, AI će automatski generisati OG sliku kada objavite članak.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
