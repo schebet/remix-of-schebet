@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { imagetools } from "vite-imagetools";
+import { prerenderOgPages } from "./build/prerender-og-pages";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -11,22 +12,29 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   plugins: [
-    react(), 
+    react(),
     imagetools({
       defaultDirectives: (url) => {
         // Automatically convert to WebP and create optimized versions
         return new URLSearchParams({
-          format: 'webp',
-          quality: '85',
+          format: "webp",
+          quality: "85",
         });
       },
     }),
-    mode === "development" && componentTagger()
+    // Generate static HTML files for /blog/:slug pages with correct OG meta tags
+    // so social crawlers can see per-article images (they don't execute JS).
+    prerenderOgPages({
+      siteUrl: "https://sebet.lovable.app",
+      defaultOgImage: "https://sebet.lovable.app/og-images/default.jpg",
+    }),
+    mode === "development" && componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  assetsInclude: ['**/*.JPG', '**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.webp'],
+  assetsInclude: ["**/*.JPG", "**/*.jpg", "**/*.jpeg", "**/*.png", "**/*.webp"],
 }));
+
