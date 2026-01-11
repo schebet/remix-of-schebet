@@ -8,9 +8,14 @@ interface SocialShareProps {
   description?: string;
 }
 
+const SITE_URL = "https://sebet.lovable.app";
+
 export const SocialShare = ({ url, title, description }: SocialShareProps) => {
   const { toast } = useToast();
-  const fullUrl = `${window.location.origin}${url}`;
+
+  const fullUrl = url.startsWith("http://") || url.startsWith("https://")
+    ? url
+    : `${SITE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 
   const handleShare = async (platform: string) => {
     let shareUrl = "";
