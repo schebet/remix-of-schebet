@@ -140,7 +140,19 @@ const BlogPost = () => {
   
   // Use dynamic OG image if available, otherwise fallback to cover image or default
   const defaultOgImage = 'https://geflwjxcposyetxrmbcq.supabase.co/storage/v1/object/public/article-images/covers/1766478998950-uft5dfsb4l.jpg';
-  const ogImageUrl = article.og_image || article.cover_image || defaultOgImage;
+  
+  // Ensure OG image URL is absolute (Facebook requires absolute URLs)
+  const getAbsoluteUrl = (url: string | null): string => {
+    if (!url) return defaultOgImage;
+    // If already absolute URL, return as-is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // Convert relative URL to absolute
+    return `${siteUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+  
+  const ogImageUrl = getAbsoluteUrl(article.og_image) || getAbsoluteUrl(article.cover_image) || defaultOgImage;
 
   return (
     <div className="min-h-screen flex flex-col">
