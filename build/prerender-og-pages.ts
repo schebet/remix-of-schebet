@@ -37,6 +37,14 @@ const buildHeadBlock = (args: {
   ogImage: string;
   ogUrl: string;
 }) => {
+  const ogImageType = (() => {
+    const u = args.ogImage.toLowerCase().split("?")[0].split("#")[0];
+    if (u.endsWith(".png")) return "image/png";
+    if (u.endsWith(".webp")) return "image/webp";
+    if (u.endsWith(".gif")) return "image/gif";
+    return "image/jpeg";
+  })();
+
   const title = escapeHtmlAttr(args.title);
   const description = escapeHtmlAttr(args.description);
   const canonicalUrl = escapeHtmlAttr(args.canonicalUrl);
@@ -52,10 +60,10 @@ const buildHeadBlock = (args: {
     <meta property="og:site_name" content="Selo Šebet" />
     <meta property="og:title" content="${title}" />
     <meta property="og:description" content="${description}" />
-    <meta property="og:image" content="${ogImage}" />
-    <meta property="og:image:secure_url" content="${ogImage}" />
-    <meta property="og:image:type" content="image/jpeg" />
-    <meta property="og:image:width" content="1200" />
+     <meta property="og:image" content="${ogImage}" />
+     <meta property="og:image:secure_url" content="${ogImage}" />
+     <meta property="og:image:type" content="${ogImageType}" />
+     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="${title}" />
     <meta property="og:url" content="${ogUrl}" />
@@ -169,8 +177,9 @@ export const prerenderOgPages = (options: Options): Plugin => {
             cover_image: a.cover_image,
           });
 
-          const canonicalUrl = `${options.siteUrl}/blog/${a.slug}/`;
-          const pageTitle = `${a.title} - Selo Šebet`;
+           const slugPath = encodeURIComponent(a.slug);
+           const canonicalUrl = `${options.siteUrl}/blog/${slugPath}/`;
+           const pageTitle = `${a.title} - Selo Šebet`;
           const description =
             (a.excerpt || "").trim() ||
             "Priče, fotografije i istorija sela Šebet.";
