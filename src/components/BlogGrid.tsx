@@ -169,7 +169,7 @@ export const BlogGrid = ({ selectedCategory }: { selectedCategory?: string }) =>
                     </CardDescription>
                   </CardContent>
                   <CardFooter className="flex items-center justify-end">
-                    <Link to={`/blog/${post.slug}`}>
+                    <Link to={`/blog/${post.slug}/`}>
                       <Button variant="ghost" size="sm" className="bg-muted text-primary hover:bg-muted/80 hover:text-primary transition-all duration-300">
                         Pročitaj više
                         <ArrowRight className="w-4 h-4 ml-2" />

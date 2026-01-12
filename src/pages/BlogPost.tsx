@@ -136,7 +136,7 @@ const BlogPost = () => {
 
   // Use fixed production URL for OG tags - Facebook crawler doesn't execute JS
   const siteUrl = 'https://schebet-moj.lovable.app';
-  const fullUrl = `${siteUrl}/blog/${article.slug}`;
+  const fullUrl = `${siteUrl}/blog/${article.slug}/`;
   
   // Use dynamic OG image if available, otherwise fallback to cover image or default
   const defaultOgImage = 'https://geflwjxcposyetxrmbcq.supabase.co/storage/v1/object/public/article-images/covers/1766478998950-uft5dfsb4l.jpg';
@@ -227,7 +227,7 @@ const BlogPost = () => {
             {/* Social Share */}
             <div className="mb-8 pb-8 border-b border-border">
               <SocialShare 
-                url={`/blog/${article.slug}`}
+                url={`/blog/${article.slug}/`}
                 title={article.title}
                 description={article.excerpt || ""}
               />
