@@ -8,7 +8,7 @@ interface SocialShareProps {
   description?: string;
 }
 
-const SITE_URL = "https://sebet.lovable.app";
+const SITE_URL = "https://schebet-moj.lovable.app";
 
 export const SocialShare = ({ url, title, description }: SocialShareProps) => {
   const { toast } = useToast();
