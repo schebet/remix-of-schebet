@@ -135,7 +135,7 @@ const BlogPost = () => {
   }
 
   // Use fixed production URL for OG tags - Facebook crawler doesn't execute JS
-  const siteUrl = 'https://sebet.lovable.app';
+  const siteUrl = 'https://schebet-moj.lovable.app';
   const fullUrl = `${siteUrl}/blog/${article.slug}`;
   
   // Use dynamic OG image if available, otherwise fallback to cover image or default

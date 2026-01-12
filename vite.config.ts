@@ -25,8 +25,8 @@ export default defineConfig(({ mode }) => ({
     // Generate static HTML files for /blog/:slug pages with correct OG meta tags
     // so social crawlers can see per-article images (they don't execute JS).
     prerenderOgPages({
-      siteUrl: "https://sebet.lovable.app",
-      defaultOgImage: "https://sebet.lovable.app/og-images/default.jpg",
+      siteUrl: "https://schebet-moj.lovable.app",
+      defaultOgImage: "https://schebet-moj.lovable.app/og-images/default.jpg",
     }),
     mode === "development" && componentTagger(),
   ].filter(Boolean),
