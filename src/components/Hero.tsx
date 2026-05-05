@@ -151,15 +151,17 @@ export const Hero = () => {
 
   return (
     <section id="home" className="relative h-screen overflow-hidden bg-background">
-      {/* Dark gradient background */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(135deg, hsl(220 40% 6%) 0%, hsl(200 50% 10%) 50%, hsl(180 40% 8%) 100%)",
-        }}
-      />
-
+      {/* Original background image */}
+      <div className="absolute inset-0">
+        <img
+          src={heroImageUrl}
+          srcSet={heroImageSrcSet}
+          sizes={getHeroSizes()}
+          alt="selo Šebet"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
+      </div>
       {/* 3D Canvas */}
       <div className="absolute inset-0">
         {ready && (
