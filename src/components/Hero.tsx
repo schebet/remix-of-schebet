@@ -4,9 +4,6 @@ import { Float, Points, PointMaterial } from "@react-three/drei";
 import * as THREE from "three";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
-import heroImageSrcSet from "@/assets/hero-village.jpg?w=640;768;1024;1280;1920&format=webp&quality=85&as=srcset";
-import heroImageUrl from "@/assets/hero-village.jpg?w=1920&format=webp&quality=85";
-import { getHeroSizes } from "@/lib/imageUtils";
 
 // Single bird: a low-poly cone with flapping wings (two thin boxes)
 const Bird = ({ position, color, speed }: { position: [number, number, number]; color: string; speed: number }) => {
@@ -151,17 +148,15 @@ export const Hero = () => {
 
   return (
     <section id="home" className="relative h-screen overflow-hidden bg-background">
-      {/* Original background image */}
-      <div className="absolute inset-0">
-        <img
-          src={heroImageUrl}
-          srcSet={heroImageSrcSet}
-          sizes={getHeroSizes()}
-          alt="selo Šebet"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background" />
-      </div>
+      {/* Dark gradient background */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(135deg, hsl(220 40% 6%) 0%, hsl(200 50% 10%) 50%, hsl(180 40% 8%) 100%)",
+        }}
+      />
+
       {/* 3D Canvas */}
       <div className="absolute inset-0">
         {ready && (
