@@ -4,6 +4,9 @@ import { Float, Points, PointMaterial } from "@react-three/drei";
 import * as THREE from "three";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
+import heroImageSrcSet from "@/assets/hero-village.jpg?w=640;768;1024;1280;1920&format=webp&quality=85&as=srcset";
+import heroImageUrl from "@/assets/hero-village.jpg?w=1920&format=webp&quality=85";
+import { getHeroSizes } from "@/lib/imageUtils";
 
 // Single bird: a low-poly cone with flapping wings (two thin boxes)
 const Bird = ({ position, color, speed }: { position: [number, number, number]; color: string; speed: number }) => {
