@@ -181,3 +181,17 @@ All colors MUST be HSL.
     @apply transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_8px_30px_-8px_hsl(var(--primary)/0.3)];
   }
 }
+
+.video-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  margin: 1.5rem 0;
+}
+@media (min-width: 640px) {
+  .video-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .video-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.video-grid > * { margin: 0 !important; }
