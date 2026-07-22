@@ -18,7 +18,7 @@ export const Footer = () => {
   return (
     <footer className="bg-card border-t border-border">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* About */}
           <div>
             <h3 className="text-2xl font-bold text-gradient-primary mb-4">
@@ -79,33 +79,6 @@ export const Footer = () => {
                 <Rss className="w-5 h-5" style={{ color: '#FF6600' }} />
               </a>
             </div>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h4 className="font-bold mb-4 text-foreground">Brzi linkovi</h4>
-            <ul className="space-y-2">
-              <li>
-                <button onClick={() => handleNavClick('home')} className="text-muted-foreground hover:text-primary transition-colors cursor-pointer">
-                  Početna
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handleNavClick('blog')} className="text-muted-foreground hover:text-primary transition-colors cursor-pointer">
-                  Blog
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handleNavClick('gallery')} className="text-muted-foreground hover:text-primary transition-colors cursor-pointer">
-                  Galerija
-                </button>
-              </li>
-              <li>
-                <button onClick={() => handleNavClick('about')} className="text-muted-foreground hover:text-primary transition-colors cursor-pointer">
-                  O selu
-                </button>
-              </li>
-            </ul>
           </div>
 
           {/* Contact */}
