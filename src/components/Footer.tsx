@@ -1,19 +1,7 @@
 import { Facebook, Twitter, Github, MapPin, Phone, Rss } from "lucide-react";
-import { useLocation } from "react-router-dom";
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
-  const location = useLocation();
-
-  const handleNavClick = (sectionId: string) => {
-    // If we're not on the home page, navigate there first
-    if (location.pathname !== '/') {
-      window.location.href = `/#${sectionId}`;
-    } else {
-      // If we're on home page, smooth scroll to section
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
 
   return (
     <footer className="bg-card border-t border-border">
