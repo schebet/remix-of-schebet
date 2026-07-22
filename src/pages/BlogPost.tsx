@@ -284,7 +284,10 @@ const BlogPost = () => {
                 },
               } as Components}
             >
-              {article.content}
+              {article.content.replace(
+                /(?:[ \t]*<video\b[^>]*>[\s\S]*?<\/video>[ \t]*\n?){2,}/g,
+                (m) => `\n\n<div class="video-grid">\n\n${m}\n\n</div>\n\n`
+              )}
             </ReactMarkdown>
           </div>
         </article>
